@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ResumeIntel - Recruiter Hub</title>
+    <!-- Google Fonts Poppins and Inter -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "card-padding": "40px",
+                        "margin-mobile": "20px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "section-gap": "64px",
+                        "container-max": "1100px"
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #0c0a20, #1e1b4b, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            color: #e2e8f0;
+            -webkit-font-smoothing: antialiased;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+        }
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.1);
+            transform: translateY(-5px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        .btn-secondary:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .tab-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .paper-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        .paper-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+        }
+        .paper-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* CSS Mappings for JS Class Toggles */
+        .bg-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+            color: white !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        }
+        .text-on-primary {
+            color: white !important;
+        }
+        .bg-surface-container {
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(148, 163, 184, 0.15) !important;
+        }
+        .text-on-surface-variant {
+            color: #94a3b8 !important;
+        }
+        .hover\:bg-surface-container-high:hover {
+            background-color: rgba(30, 41, 59, 0.85) !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        .bg-secondary-container {
+            background: rgba(30, 41, 59, 0.7) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        }
+        .text-on-secondary-container {
+            color: #e2e8f0 !important;
+        }
+        .border-outline-variant {
+            border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+        .hover\:bg-surface-container:hover {
+            background-color: rgba(30, 41, 59, 0.8) !important;
+        }
+        .bg-primary-fixed {
+            background-color: rgba(16, 185, 129, 0.25) !important;
+            color: #4ade80 !important;
+            border: 1px solid rgba(16, 185, 129, 0.4) !important;
+        }
+        .text-on-primary-fixed-variant {
+            color: #4ade80 !important;
+        }
+        .bg-secondary-fixed {
+            background-color: rgba(245, 158, 11, 0.25) !important;
+            color: #fbbf24 !important;
+            border: 1px solid rgba(245, 158, 11, 0.4) !important;
+        }
+        .text-on-secondary-fixed-variant {
+            color: #fbbf24 !important;
+        }
+        .bg-tertiary-fixed {
+            background-color: rgba(148, 163, 184, 0.25) !important;
+            color: #cbd5e1 !important;
+            border: 1px solid rgba(148, 163, 184, 0.4) !important;
+        }
+        .text-on-tertiary-fixed-variant {
+            color: #cbd5e1 !important;
+        }
+        .text-primary {
+            color: #93c5fd !important;
+        }
+    </style>
+</head>
+<body class="font-body-md text-dark-200 overflow-x-hidden min-h-screen">
+    <!-- TopNavBar -->
+    <header class="glass-card shadow-lg fixed top-0 left-0 w-full z-50 h-20 flex items-center" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 0 0 20px 20px;
+    ">
+        <nav class="flex justify-between items-center w-full px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+            <div class="text-xl font-bold font-poppins flex items-center">
+                <i class="fas fa-brain mr-2 text-primary-400"></i>
+                <span class="gradient-text font-poppins">ResumeIntel</span>
+            </div>
+            <div class="hidden md:flex items-center gap-2">
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../upload_resume/code.html">Upload Resume</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../self_evaluation/code.html">Self Evaluation</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../project_recommendations/code.html">Projects</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../rewrite_resume/code.html">Rewrite Resume</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center bg-dark-800/60 border border-dark-700/50 rounded-full px-3 py-1">
+                    <a class="text-xs font-semibold text-dark-400 hover:text-white" href="../upload_resume/code.html">Candidate</a>
+                    <span class="mx-2 text-dark-500">|</span>
+                    <span class="text-xs font-semibold text-primary-400">Recruiter</span>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-primary-900/30 border border-primary-800/50 flex items-center justify-center overflow-hidden">
+                    <img class="w-full h-full object-cover" data-alt="Recruiter avatar photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnahK1LlXZ6687JOgNdGlwtHFLbcCKrQ_8KouSoW0CXrpfTJgME1RbMYRMH62aUqD5V6KZ-t7COiT6cy44rboJLUP8U5MQuuaU3GCbSlsmWA6r3TRCIhM60hJgu2go7tCxz1YHNpVjIUSXJYe8opHYaxMaS9rhTugjgEfZYbTGGSoBtZZpZdQ1DCiXG9LIQE7Vs0GWJWLu4F1v23KexK0JnHLqGG6T1huh0AFjtKXs0usX48xbY-Ny"/>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter pt-32 pb-32">
+        <!-- Welcome Header -->
+        <div class="mb-section-gap">
+            <h1 class="text-4xl md:text-5xl font-bold font-poppins text-white mb-2 leading-tight">Recruiter Intelligence</h1>
+            <p class="text-lg text-dark-300 max-w-2xl">Refine chaotic job descriptions into ATS-friendly structures and surface top-tier talent matching your specific domain requirements.</p>
+        </div>
+
+        <!-- Tool Selection / Tabs -->
+        <div class="flex gap-4 mb-10 overflow-x-auto hide-scrollbar">
+            <button class="tab-transition flex items-center gap-2 whitespace-nowrap bg-primary text-on-primary px-6 py-3 rounded-full font-semibold text-sm shadow-lg" id="tab-cleaner" onclick="switchTool('cleaner')">
+                <span class="material-symbols-outlined">auto_fix_high</span>
+                JD CLEANER &amp; NORMALIZER
+            </button>
+            <button class="tab-transition flex items-center gap-2 whitespace-nowrap bg-surface-container text-on-surface-variant px-6 py-3 rounded-full font-semibold text-sm hover:bg-surface-container-high" id="tab-finder" onclick="switchTool('finder')">
+                <span class="material-symbols-outlined">person_search</span>
+                CANDIDATE FINDER
+            </button>
+        </div>
+
+        <!-- Tool 1: Clean Up Job Description -->
+        <section class="block space-y-12" id="tool-cleaner">
+            <div class="paper-card rounded-xl p-card-padding">
+                <div class="flex flex-col gap-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-white font-poppins mb-2">Source Job Description</h3>
+                        <p class="text-dark-300 text-sm">Paste your raw, messy, or conversational job description here.</p>
+                    </div>
+                    <textarea class="w-full h-64 p-6 rounded-xl border border-dark-700 bg-dark-800/50 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-white resize-none transition-all" placeholder="e.g. We're looking for a ninja developer who knows React but also some backend stuff..."></textarea>
+                    <div class="flex justify-end">
+                        <button class="btn-primary px-8 py-4 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-95">
+                            Normalize
+                            <span class="material-symbols-outlined">magic_button</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Result Card -->
+            <div class="paper-card rounded-xl overflow-hidden">
+                <div class="bg-primary-900/40 border-b border-dark-700 p-6 flex justify-between items-center text-white">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+                        <span class="text-lg font-bold font-poppins">Normalized Architecture</span>
+                    </div>
+                    <button class="flex items-center gap-2 text-xs font-semibold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors border border-white/10">
+                        <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                        Copy
+                    </button>
+                </div>
+                <div class="p-card-padding grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="space-y-8">
+                        <div>
+                            <span class="text-xs font-semibold text-primary-400 uppercase tracking-widest block mb-2">Role &amp; Level</span>
+                            <p class="text-2xl font-bold text-white font-poppins">Senior Full-Stack Engineer</p>
+                            <span class="inline-block mt-2 px-3 py-1 bg-red-950/20 border border-red-800/30 text-red-300 rounded-full text-xs font-semibold">High Priority</span>
+                        </div>
+                        <div>
+                            <span class="text-xs font-semibold text-primary-400 uppercase tracking-widest block mb-2">Key Skills</span>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-dark-200 rounded-full text-sm">React.js</span>
+                                <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-dark-200 rounded-full text-sm">Node.js</span>
+                                <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-dark-200 rounded-full text-sm">TypeScript</span>
+                                <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-dark-200 rounded-full text-sm">PostgreSQL</span>
+                                <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-dark-200 rounded-full text-sm">AWS Lambda</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-xs font-semibold text-primary-400 uppercase tracking-widest block mb-2">Required Tools</span>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 border border-dark-700 rounded-full text-sm text-dark-300">Jira</span>
+                                <span class="px-3 py-1 border border-dark-700 rounded-full text-sm text-dark-300">Docker</span>
+                                <span class="px-3 py-1 border border-dark-700 rounded-full text-sm text-dark-300">GitHub Actions</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-primary-400 uppercase tracking-widest block mb-2">Core Responsibilities</span>
+                        <ul class="space-y-4">
+                            <li class="flex gap-3 text-sm text-dark-300">
+                                <span class="material-symbols-outlined text-primary-400 pt-1">check_circle</span>
+                                <span>Architect and maintain scalable frontend architectures using modern React patterns.</span>
+                            </li>
+                            <li class="flex gap-3 text-sm text-dark-300">
+                                <span class="material-symbols-outlined text-primary-400 pt-1">check_circle</span>
+                                <span>Collaborate with cross-functional teams to define and deliver high-impact features.</span>
+                            </li>
+                            <li class="flex gap-3 text-sm text-dark-300">
+                                <span class="material-symbols-outlined text-primary-400 pt-1">check_circle</span>
+                                <span>Mentor junior developers and drive technical excellence through rigorous code reviews.</span>
+                            </li>
+                            <li class="flex gap-3 text-sm text-dark-300">
+                                <span class="material-symbols-outlined text-primary-400 pt-1">check_circle</span>
+                                <span>Optimize application performance and ensure high availability of production services.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tool 2: Find Matching Candidates -->
+        <section class="hidden space-y-12" id="tool-finder">
+            <div class="paper-card rounded-xl p-card-padding">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 flex flex-col gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-white font-poppins mb-1">Target Description</h3>
+                            <p class="text-dark-300 text-sm">Paste the JD or specific criteria to search against.</p>
+                        </div>
+                        <textarea class="w-full h-40 p-4 rounded-xl border border-dark-700 bg-dark-800/50 text-white focus:ring-2 focus:ring-primary-500 outline-none resize-none" placeholder="Looking for a Product Designer with 5+ years of B2B SaaS experience..."></textarea>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div>
+                            <label class="text-xs font-semibold text-dark-400 mb-2 block tracking-wider uppercase">Domain Focus</label>
+                            <select class="w-full p-4 rounded-xl border border-dark-700 bg-dark-800/50 text-white focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer">
+                                <option>FinTech &amp; Banking</option>
+                                <option>Healthcare Tech</option>
+                                <option>SaaS &amp; Enterprise</option>
+                                <option>E-commerce</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-dark-400 mb-2 block tracking-wider uppercase">Candidate Count</label>
+                            <select class="w-full p-4 rounded-xl border border-dark-700 bg-dark-800/50 text-white focus:ring-2 focus:ring-primary-500 cursor-pointer">
+                                <option>Top 5 Matches</option>
+                                <option>Top 10 Matches</option>
+                                <option>Top 25 Matches</option>
+                            </select>
+                        </div>
+                        <button class="mt-auto btn-primary py-4 rounded-xl text-sm font-bold flex justify-center items-center gap-2 active:scale-95 shadow-md">
+                            Find Candidates
+                            <span class="material-symbols-outlined">person_search</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Candidate Results List -->
+            <div class="space-y-6">
+                <div class="flex justify-between items-center px-4">
+                    <h4 class="text-xl font-bold font-poppins text-white">Search Results <span class="text-primary-400 font-normal text-sm ml-2">(3 Found)</span></h4>
+                    <div class="flex gap-2">
+                        <button class="p-2 hover:bg-dark-800 rounded-full text-dark-300 hover:text-white transition-colors border border-transparent hover:border-dark-700"><span class="material-symbols-outlined">filter_list</span></button>
+                        <button class="p-2 hover:bg-dark-800 rounded-full text-dark-300 hover:text-white transition-colors border border-transparent hover:border-dark-700"><span class="material-symbols-outlined">sort</span></button>
+                    </div>
+                </div>
+                <!-- Candidate Card 1 -->
+                <div class="paper-card rounded-xl p-8 flex flex-col md:flex-row gap-8 items-start">
+                    <div class="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-dark-700/50">
+                        <img class="w-full h-full object-cover" data-alt="Alex Rivera headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzNNryLy2oUq3IYlWkQ3_mgk61XMeuNyb07ao6SMuao-OnCBMcO6JcoNyDUH6ujBrqtPk6AhhUi4P6s6VuYDH3L0cZHhBevqmc7N1dQhdgqdBYlWEhHjRRly0JgKw8dDRivtN4ovjXS1XKnQDGpRrPJKK0uddwd0scyqEY8sR9bjvz-R-tOwtMdjIBQdxaFag-bJj_-_-8tg-ha6qT3AQYv3HWnP_rg9aiv9JU64iB9YyniYmLRu0C"/>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex flex-col md:flex-row justify-between mb-4 gap-2">
+                            <div>
+                                <h5 class="text-xl font-bold text-white font-poppins">Alex Rivera</h5>
+                                <p class="text-dark-300 text-sm">Lead Product Designer • 8 yrs exp.</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <div class="flex items-center gap-2 text-primary-400">
+                                    <span class="font-bold text-xl font-poppins text-white">98%</span>
+                                    <span class="text-xs font-semibold bg-primary-fixed text-on-primary-fixed-variant px-2 py-0.5 rounded-full uppercase tracking-widest border border-green-800/30">Match</span>
+                                </div>
+                                <span class="text-xs text-dark-400 mt-1">Strong domain alignment</span>
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <p class="text-sm text-dark-300 leading-relaxed line-clamp-2">Previously led design at Stripe for internal financial dashboards. Specialized in complex data visualization and multi-tenant systems.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-primary-300 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px] fill-icon">star</span>
+                                SaaS Expert
+                            </span>
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Design Systems</span>
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Stakeholder Management</span>
+                        </div>
+                    </div>
+                    <div class="flex md:flex-col gap-2 w-full md:w-auto shrink-0">
+                        <button class="flex-1 md:w-full bg-secondary-container text-on-secondary-container py-2 px-6 rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all">View Profile</button>
+                        <button class="flex-1 md:w-full border border-dark-700 py-2 px-6 rounded-lg text-xs font-bold text-dark-300 hover:text-white hover:bg-dark-800 active:scale-95 transition-all">Shortlist</button>
+                    </div>
+                </div>
+                <!-- Candidate Card 2 -->
+                <div class="paper-card rounded-xl p-8 flex flex-col md:flex-row gap-8 items-start opacity-90">
+                    <div class="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-dark-700/50">
+                        <img class="w-full h-full object-cover" data-alt="Jordan Smythe headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPthfgCM1_IYwVycYKG2JV_t5So1Uvhz3McV6aikEwNAiKiRJUMKYiOR7tFWHNP0joTlUnOEsK13MJKdV2e2EqEgrlBvNCwCrz28jjeRsyReJ99xU7artLtWft3lzj8RA-UYNJOekFml6HczjRdfeNU7HlKCCiD96LBYBFoMR_hfE7au1s5332zsTQR63OewhuHzFUpYcYfQ22kDivDS37BW7X2TAYVL01k7zWHhEYjm1vOofuLWU3"/>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex flex-col md:flex-row justify-between mb-4 gap-2">
+                            <div>
+                                <h5 class="text-xl font-bold text-white font-poppins">Jordan Smythe</h5>
+                                <p class="text-dark-300 text-sm">Senior UX Architect • 6 yrs exp.</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <div class="flex items-center gap-2 text-primary-400">
+                                    <span class="font-bold text-xl font-poppins text-white">84%</span>
+                                    <span class="text-xs font-semibold bg-secondary-fixed text-on-secondary-fixed-variant px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-850/30">Match</span>
+                                </div>
+                                <span class="text-xs text-dark-400 mt-1">Good technical fit</span>
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <p class="text-sm text-dark-300 leading-relaxed line-clamp-2">Focused on accessibility and user research for enterprise healthcare platforms. Expert at translating complex workflows into simple interfaces.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Accessibility Specialist</span>
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Healthcare Domain</span>
+                        </div>
+                    </div>
+                    <div class="flex md:flex-col gap-2 w-full md:w-auto shrink-0">
+                        <button class="flex-1 md:w-full bg-secondary-container text-on-secondary-container py-2 px-6 rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all">View Profile</button>
+                        <button class="flex-1 md:w-full border border-dark-700 py-2 px-6 rounded-lg text-xs font-bold text-dark-300 hover:text-white hover:bg-dark-800 active:scale-95 transition-all">Shortlist</button>
+                    </div>
+                </div>
+                <!-- Candidate Card 3 -->
+                <div class="paper-card rounded-xl p-8 flex flex-col md:flex-row gap-8 items-start opacity-75">
+                    <div class="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-dark-700/50">
+                        <img class="w-full h-full object-cover" data-alt="Casey Chen headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIxn7l-HC-IALfAX0D-RWjI5dqs1eD80w3ptxtaxf_j2ai5Ix6795_mAiakRAMXfiV6A9dGHForSZtE33vkxyRMQ8tLoJh-nDB7fPAx8hWVbyEjtaBQhRBTZshjBEsnkn80HSk8mhM9pTLuBs2RQG2vE8dwujKwxtQjbFkWzm6oCj2S0DC3CmtBovn00mGTusNI5p4Zm1IFmbWSY0kzTi5vv3nD1BTomMSKWmVXmCg13h8YQzuLWzp"/>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex flex-col md:flex-row justify-between mb-4 gap-2">
+                            <div>
+                                <h5 class="text-xl font-bold text-white font-poppins">Casey Chen</h5>
+                                <p class="text-dark-300 text-sm">UX Designer • 4 yrs exp.</p>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <div class="flex items-center gap-2 text-dark-300">
+                                    <span class="font-bold text-xl font-poppins text-white">72%</span>
+                                    <span class="text-xs font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant px-2 py-0.5 rounded-full uppercase tracking-widest border border-dark-700/55">Match</span>
+                                </div>
+                                <span class="text-xs text-dark-400 mt-1">Moderate skill overlap</span>
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <p class="text-sm text-dark-300 leading-relaxed line-clamp-2">Transitioning from graphic design to UX. Strong visual craft with growing knowledge of user research methodologies and prototyping.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Visual Design</span>
+                            <span class="px-3 py-1 bg-dark-800 border border-dark-750 text-xs font-semibold rounded-md text-dark-300">Figma Pro</span>
+                        </div>
+                    </div>
+                    <div class="flex md:flex-col gap-2 w-full md:w-auto shrink-0">
+                        <button class="flex-1 md:w-full bg-secondary-container text-on-secondary-container py-2 px-6 rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all">View Profile</button>
+                        <button class="flex-1 md:w-full border border-dark-700 py-2 px-6 rounded-lg text-xs font-bold text-dark-300 hover:text-white hover:bg-dark-800 active:scale-95 transition-all">Shortlist</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- BottomNavBar (Mobile Only) -->
+    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center py-3 md:hidden shadow-lg rounded-t-xl" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+    ">
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../upload_resume/code.html">
+            <span class="material-symbols-outlined text-dark-400">upload_file</span>
+            <span class="text-[11px] mt-1">Upload</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../self_evaluation/code.html">
+            <span class="material-symbols-outlined text-dark-400">analytics</span>
+            <span class="text-[11px] mt-1">Evaluate</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../project_recommendations/code.html">
+            <span class="material-symbols-outlined text-dark-400">folder_special</span>
+            <span class="text-[11px] mt-1">Projects</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../rewrite_resume/code.html">
+            <span class="material-symbols-outlined text-dark-400">edit_note</span>
+            <span class="text-[11px] mt-1">Rewrite</span>
+        </a>
+    </nav>
+
+    <script>
+        function switchTool(toolId) {
+            const cleanerSection = document.getElementById('tool-cleaner');
+            const finderSection = document.getElementById('tool-finder');
+            const cleanerTab = document.getElementById('tab-cleaner');
+            const finderTab = document.getElementById('tab-finder');
+
+            const activeClass = 'bg-primary text-on-primary px-6 py-3 rounded-full font-label-sm text-label-sm shadow-lg';
+            const inactiveClass = 'bg-surface-container text-on-surface-variant px-6 py-3 rounded-full font-label-sm text-label-sm hover:bg-surface-container-high';
+
+            if (toolId === 'cleaner') {
+                cleanerSection.classList.remove('hidden');
+                finderSection.classList.add('hidden');
+                cleanerTab.className = 'tab-transition flex items-center gap-2 whitespace-nowrap ' + activeClass;
+                finderTab.className = 'tab-transition flex items-center gap-2 whitespace-nowrap ' + inactiveClass;
+            } else {
+                cleanerSection.classList.add('hidden');
+                finderSection.classList.remove('hidden');
+                finderTab.className = 'tab-transition flex items-center gap-2 whitespace-nowrap ' + activeClass;
+                cleanerTab.className = 'tab-transition flex items-center gap-2 whitespace-nowrap ' + inactiveClass;
+            }
+        }
+
+        // Micro-interaction: Scale effect on input focus
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(ta => {
+            ta.addEventListener('focus', () => {
+                const parentCard = ta.closest('.paper-card');
+                if (parentCard) {
+                    parentCard.classList.add('scale-[1.005]');
+                }
+            });
+            ta.addEventListener('blur', () => {
+                const parentCard = ta.closest('.paper-card');
+                if (parentCard) {
+                    parentCard.classList.remove('scale-[1.005]');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ResumeIntel - Project Recommendations</title>
+    <!-- Google Fonts Poppins and Inter -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "card-padding": "40px",
+                        "margin-mobile": "20px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "section-gap": "64px",
+                        "container-max": "1100px"
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #0c0a20, #1e1b4b, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            color: #e2e8f0;
+            scroll-behavior: smooth;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+        }
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.1);
+            transform: translateY(-5px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        .btn-secondary:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        /* Mapped styles for inputs focus toggles */
+        .text-primary {
+            color: #93c5fd !important;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="font-body-md text-dark-200 min-h-screen pb-24 md:pb-0">
+    <!-- TopNavBar -->
+    <header class="glass-card shadow-lg fixed top-0 left-0 w-full z-50 h-20 flex items-center" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 0 0 20px 20px;
+    ">
+        <div class="flex justify-between items-center w-full px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+            <div class="text-xl font-bold font-poppins flex items-center">
+                <i class="fas fa-brain mr-2 text-primary-400"></i>
+                <span class="gradient-text font-poppins">ResumeIntel</span>
+            </div>
+            <nav class="hidden md:flex items-center gap-2">
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../upload_resume/code.html">Upload Resume</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../self_evaluation/code.html">Self Evaluation</a>
+                <a class="text-white bg-primary-600/30 border border-primary-500/30 rounded-lg px-4 py-2 font-medium transition-all duration-300 ease-in-out active:scale-95" href="#">Projects</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../rewrite_resume/code.html">Rewrite Resume</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center bg-dark-800/60 border border-dark-700/50 rounded-full px-3 py-1">
+                    <a class="text-xs font-semibold text-dark-400 hover:text-white" href="../upload_resume/code.html">Candidate</a>
+                    <span class="mx-2 text-dark-500">|</span>
+                    <a class="text-xs font-semibold text-dark-400 hover:text-white" href="../recruiter_tools/code.html">Recruiter</a>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-primary-900/30 border border-primary-800/50 flex items-center justify-center overflow-hidden hover:scale-[1.02] transition-transform duration-200 cursor-pointer">
+                    <img class="w-full h-full object-cover" data-alt="Candidate profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuJC7S4JFdMTsyF-bW7OCD1TONYHtbrFCJSnfXqi2Q5NPW2DbKLCVFBB2QgCFwCV_whGQVuG3D89xrdIvaUAZyMSjEA1DiOGamqIA57bt9x8llfX5AK3FQJBHuipzf_Ix5_sFJZ8l-6x4KFVmObJE4I_H4cf4VtBhDDMbUoUXZ2JZBWCqXP5mSpfmsQstF3T2Ttd0hDrW80JWF9KgWcrmnEQYlYmVzsSNoirDFna7WDAuL9ZMWaNim"/>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter pt-32 pb-24">
+        <!-- Hero Section -->
+        <div class="mb-section-gap text-center md:text-left">
+            <h1 class="text-4xl md:text-5xl font-bold font-poppins text-white mb-4 leading-tight">Strategic Project Lab</h1>
+            <p class="text-lg text-dark-300 max-w-2xl">
+                Close your technical gaps and boost your ATS score by completing curated projects designed to highlight the specific skills recruiters in your domain are searching for.
+            </p>
+        </div>
+
+        <!-- Input Card -->
+        <section class="card p-card-padding mb-section-gap">
+            <div class="flex flex-col gap-6">
+                <div class="flex items-center gap-3 mb-2 border-b border-dark-700/55 pb-4">
+                    <span class="material-symbols-outlined text-primary-400 text-3xl">analytics</span>
+                    <h2 class="text-xl font-bold font-poppins text-white">Analysis Parameters</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-dark-400 uppercase tracking-wider transition-colors duration-200">Candidate ID</label>
+                        <input class="w-full bg-dark-800/50 border border-dark-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-white backdrop-blur-sm" placeholder="e.g. CAND-8821" type="text"/>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-dark-400 uppercase tracking-wider transition-colors duration-200">Evaluation ID</label>
+                        <input class="w-full bg-dark-800/50 border border-dark-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-white backdrop-blur-sm" placeholder="e.g. EVAL-99" type="text"/>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-dark-400 uppercase tracking-wider transition-colors duration-200">Current Score</label>
+                        <input class="w-full bg-dark-800/50 border border-dark-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-white backdrop-blur-sm" placeholder="0-100" type="number"/>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-dark-400 uppercase tracking-wider transition-colors duration-200">Target Domain</label>
+                        <select class="w-full bg-dark-800/50 border border-dark-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-white backdrop-blur-sm cursor-pointer">
+                            <option>Full Stack Engineering</option>
+                            <option>Data Science &amp; AI</option>
+                            <option>Product Management</option>
+                            <option>Cybersecurity</option>
+                            <option>Cloud Architecture</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-semibold text-dark-400 uppercase tracking-wider transition-colors duration-200">Identified Skill Gaps</label>
+                    <textarea class="w-full bg-dark-800/50 border border-dark-700 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-white custom-scrollbar" placeholder="List skills separated by commas (e.g. Redis, Docker, System Design, GraphQL...)" rows="4"></textarea>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button class="btn-primary px-8 py-4 rounded-xl font-bold flex items-center gap-2 active:scale-95">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                        Get Project Recommendations
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Project Results List -->
+        <div class="flex flex-col gap-12">
+            <h3 class="text-2xl font-bold font-poppins text-white border-b border-dark-700/55 pb-4">Personalized Roadmap</h3>
+            
+            <!-- Project Card 1 -->
+            <div class="card paper-shadow-hover p-card-padding flex flex-col md:flex-row gap-8 transition-all duration-300 group border-l-4 border-l-red-500">
+                <div class="flex-none">
+                    <div class="w-16 h-16 rounded-full bg-primary-900/30 border border-primary-800/50 text-primary-300 flex items-center justify-center font-bold text-2xl font-poppins">1</div>
+                </div>
+                <div class="flex-grow flex flex-col gap-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <h4 class="text-xl font-bold font-poppins text-white group-hover:text-primary-300 transition-colors">Distributed Cache System with Redis</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-red-950/20 border border-red-800/30 text-red-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">High Impact</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">Architectural</span>
+                            <span class="bg-dark-800 border border-dark-750 text-dark-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">~20 Hours</span>
+                        </div>
+                    </div>
+                    <p class="text-dark-300 leading-relaxed">
+                        Implement a custom distributed caching layer for a high-traffic e-commerce microservice. This project demonstrates your ability to handle concurrency, latency reduction, and data consistency challenges frequently encountered in senior-level roles.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Key Outcome</h5>
+                            <p class="text-sm text-dark-300">Validates proficiency in <b>System Design</b> and <b>High-Concurrency</b> patterns. Bridges the 'Performance Optimization' gap identified in your profile.</p>
+                        </div>
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Tools &amp; Datasets</h5>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Redis</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Go / Rust</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Docker</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Prometheus</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Card 2 -->
+            <div class="card paper-shadow-hover p-card-padding flex flex-col md:flex-row gap-8 transition-all duration-300 group border-l-4 border-l-amber-500">
+                <div class="flex-none">
+                    <div class="w-16 h-16 rounded-full bg-primary-900/30 border border-primary-800/50 text-primary-300 flex items-center justify-center font-bold text-2xl font-poppins">2</div>
+                </div>
+                <div class="flex-grow flex flex-col gap-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <h4 class="text-xl font-bold font-poppins text-white group-hover:text-primary-300 transition-colors">Kubernetes Deployment Pipeline</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-amber-950/20 border border-amber-800/30 text-amber-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">Intermediate</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">DevOps</span>
+                            <span class="bg-dark-800 border border-dark-750 text-dark-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">~12 Hours</span>
+                        </div>
+                    </div>
+                    <p class="text-dark-300 leading-relaxed">
+                        Design a robust CI/CD pipeline using GitHub Actions that builds, tests, and deploys a containerized application to a local Kubernetes cluster (Minikube). Showcase your knowledge of orchestration and automated scaling.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Key Outcome</h5>
+                            <p class="text-sm text-dark-300">Proves <b>Infrastructure as Code (IaC)</b> skills and <b>Cloud-Native</b> development mindset. Essential for current market ATS matching.</p>
+                        </div>
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Tools &amp; Datasets</h5>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">GitHub Actions</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Kubernetes</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Helm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Card 3 -->
+            <div class="card paper-shadow-hover p-card-padding flex flex-col md:flex-row gap-8 transition-all duration-300 group border-l-4 border-l-green-500">
+                <div class="flex-none">
+                    <div class="w-16 h-16 rounded-full bg-primary-900/30 border border-primary-800/50 text-primary-300 flex items-center justify-center font-bold text-2xl font-poppins">3</div>
+                </div>
+                <div class="flex-grow flex flex-col gap-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <h4 class="text-xl font-bold font-poppins text-white group-hover:text-primary-300 transition-colors">Real-time Analytics Dashboard</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-green-950/20 border border-green-800/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">Full Stack</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">Visual</span>
+                            <span class="bg-dark-800 border border-dark-750 text-dark-300 px-3 py-1 rounded-full text-xs font-semibold uppercase">~15 Hours</span>
+                        </div>
+                    </div>
+                    <p class="text-dark-300 leading-relaxed">
+                        Build a front-end dashboard that consumes live WebSocket data to visualize real-time analytics. Focus on data binding efficiency and modern component architecture using React or Vue.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Key Outcome</h5>
+                            <p class="text-sm text-dark-300">Demonstrates mastery of <b>Asynchronous UI</b> and <b>WebSockets</b>. Highlights attention to user experience in high-data environments.</p>
+                        </div>
+                        <div class="bg-dark-900/25 border border-dark-800/50 rounded-xl p-6">
+                            <h5 class="text-xs font-bold text-dark-400 uppercase mb-3 tracking-widest">Tools &amp; Datasets</h5>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">React</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">D3.js</span>
+                                <span class="bg-dark-800 border border-dark-750 text-dark-300 px-2.5 py-1 rounded text-xs font-medium">Socket.io</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Explainer -->
+        <footer class="mt-section-gap mb-12 border-t border-dark-700/50 pt-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h5 class="text-xl font-bold font-poppins text-white mb-6">Difficulty Mapping &amp; Impact</h5>
+                    <ul class="flex flex-col gap-4">
+                        <li class="flex items-center gap-4">
+                            <div class="w-4 h-4 rounded-full bg-red-500 shrink-0"></div>
+                            <span class="text-sm text-dark-300"><b class="text-white">Critical Impact:</b> High difficulty, addresses multiple core senior-level skill gaps.</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <div class="w-4 h-4 rounded-full bg-orange-500 shrink-0"></div>
+                            <span class="text-sm text-dark-300"><b class="text-white">Significant Gap:</b> Moderate difficulty, targets missing domain-specific technical tags.</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <div class="w-4 h-4 rounded-full bg-yellow-400 shrink-0"></div>
+                            <span class="text-sm text-dark-300"><b class="text-white">Skill Refinement:</b> Lower difficulty, perfects existing skills for higher ATS confidence.</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <div class="w-4 h-4 rounded-full bg-green-500 shrink-0"></div>
+                            <span class="text-sm text-dark-300"><b class="text-white">Bonus Credential:</b> Fast projects that add "nice-to-have" keywords to your profile.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-primary-900/20 rounded-xl p-8 border border-primary-800/30 text-primary-300">
+                    <span class="material-symbols-outlined text-primary-400 text-4xl mb-4">lightbulb</span>
+                    <p class="text-base font-semibold leading-relaxed italic font-poppins">
+                        "Recruiters look for evidence, not just mentions. Completing these projects gives you verifiable 'proof of work' that can be linked directly from your resume."
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- BottomNavBar (Mobile Only) -->
+    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center py-3 md:hidden shadow-lg rounded-t-xl" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+    ">
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../upload_resume/code.html">
+            <span class="material-symbols-outlined text-dark-400">upload_file</span>
+            <span class="text-[11px] mt-1">Upload</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../self_evaluation/code.html">
+            <span class="material-symbols-outlined text-dark-400">analytics</span>
+            <span class="text-[11px] mt-1">Evaluate</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-white bg-primary-600/30 border border-primary-500/30 rounded-xl px-4 py-1.5 active:scale-95 transition-transform" href="#">
+            <span class="material-symbols-outlined fill-icon text-primary-400">folder_special</span>
+            <span class="text-[11px] font-semibold mt-1">Projects</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../rewrite_resume/code.html">
+            <span class="material-symbols-outlined text-dark-400">edit_note</span>
+            <span class="text-[11px] mt-1">Rewrite</span>
+        </a>
+    </nav>
+
+    <script>
+        // Simple micro-interaction for input fields
+        document.querySelectorAll('input, textarea, select').forEach(element => {
+            element.addEventListener('focus', () => {
+                element.parentElement.querySelector('label')?.classList.add('text-primary');
+            });
+            element.addEventListener('blur', () => {
+                element.parentElement.querySelector('label')?.classList.remove('text-primary');
+            });
+        });
+
+        // Hover effect for project cards
+        document.querySelectorAll('.paper-shadow-hover').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0px)';
+            });
+        });
+    </script>
+</body>
+</html>

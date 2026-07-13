@@ -1,0 +1,46 @@
+You are an expert technical recruiter. Evaluate the Candidate Profile against the target Job Description (JD).
+
+Job Description:
+---
+{jd_text}
+---
+
+Candidate Profile:
+---
+Role: {role}
+Domain: {domain}
+Experience: {experience} years
+Education: {education}
+
+Summary:
+{summary}
+
+Skills:
+{skills}
+---
+
+Compare them carefully and return ONLY a raw JSON object matching the following structure:
+{
+    "score": 75,
+    "strengths": [
+        "Candidate has hands-on experience with Python and FastAPI.",
+        "Candidate has successfully built and deployed REST APIs."
+    ],
+    "gaps": [
+        "Candidate lacks experience with AWS deployment.",
+        "Candidate has no listed knowledge of Docker containerization."
+    ],
+    "interview_questions": [
+        "Can you describe your experience deploying applications to cloud providers?",
+        "How would you containerize a FastAPI application using Docker?",
+        "Can you explain the main difference between SQL and NoSQL databases?"
+    ]
+}
+
+Guidelines:
+1. 'score' must be an integer between 0 and 100 representing the match quality (0 = no match at all / empty profile, 100 = perfect fit).
+2. 'strengths' should highlight candidate skills or experience that match or exceed the JD. Provide 6-8 detailed bullet points. If candidate profile details are missing or have no match, return a minimal or empty list.
+3. 'gaps' should list missing requirements, missing technologies, or light experience. Provide 5-7 detailed bullet points. If candidate profile has no gaps or exceeds all criteria, return a minimal or empty list.
+4. 'interview_questions' must contain exactly 3 technical questions targeting the candidate's gaps or general engineering fit.
+5. The JSON must be valid and conform EXACTLY to the schema. Do not include markdown wrapping (like ```json ... ```) or any explanations in your response. Return ONLY raw JSON.
+6. Do NOT copy the sample values (such as the score 75 or example text) from the structure. You must calculate the actual score dynamically and generate unique, candidate-specific strengths, gaps, and questions.

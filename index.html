@@ -1,0 +1,3651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Resume Intelligence | AI-Powered Resume Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #0c0a20, #1e1b4b, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Particle effect overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab {
+            position: relative;
+            transition: all 0.3s ease;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(30, 41, 59, 0.8));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+            border-radius: 2px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .file-upload-area {
+            border: 2px dashed rgba(148, 163, 184, 0.3);
+            transition: all 0.3s ease;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+        }
+
+        .file-upload-area:hover, .file-upload-area.dragover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            font-weight: 600;
+            padding: 14px 32px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-weight: 500;
+            padding: 12px 24px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary:disabled, .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        .skill-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .skill-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(148, 163, 184, 0.3);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(30, 41, 59, 0.8));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pill {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .strength-item, .gap-item {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid;
+        }
+
+        .strength-item {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);
+            border-left-color: #10b981;
+        }
+
+        .gap-item {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent);
+            border-left-color: #f59e0b;
+        }
+
+        .question-item {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent);
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .scrollable-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 4px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+            border-radius: 4px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #60a5fa, #3b82f6);
+        }
+
+        .candidate-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(59, 130, 246, 0.7);
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .score-badge {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            background: linear-gradient(135deg, currentColor 0%, currentColor 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            border: 1px solid;
+        }
+
+        .score-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, currentColor 0%, transparent 100%);
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+
+        .score-90 { color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
+        .score-80 { color: #4ade80; border-color: rgba(74, 222, 128, 0.3); }
+        .score-70 { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+        .score-60 { color: #fb923c; border-color: rgba(251, 146, 60, 0.3); }
+        .score-50 { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
+        
+        /* Additional styles for parsed data display */
+        .info-item {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), transparent);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #10b981;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-size: 0.75rem;
+            color: #34d399;
+            font-weight: 500;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .info-value {
+            font-size: 0.875rem;
+            color: #f8fafc;
+            font-weight: 400;
+            word-break: break-word;
+        }
+        
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        
+        .skill-pill {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent);
+            color: #93c5fd;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .summary-text {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), transparent);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #8b5cf6;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #cbd5e1;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .floating-delay-1 {
+            animation-delay: 2s;
+        }
+
+        .floating-delay-2 {
+            animation-delay: 4s;
+        }
+
+        .floating-delay-3 {
+            animation-delay: 1s;
+        }
+
+        /* Metrics specific styles */
+        .metric-card {
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .metric-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+
+        .metric-change.positive {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .metric-change.negative {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .trend-line {
+            position: relative;
+            padding-left: 24px;
+        }
+
+        .trend-line::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .trend-up::before {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+
+        .trend-down::before {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+        }
+        
+        /* Interview evaluation specific styles */
+        .interview-question-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(30, 41, 59, 0.6));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .evaluation-result-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(30, 41, 59, 0.6));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+        
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .difficulty-easier {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .difficulty-same {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .difficulty-harder {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Score-based agent decision styles */
+        .no-questions-banner {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(30, 41, 59, 0.6));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        
+        .basic-questions-banner {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(30, 41, 59, 0.6));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        
+        .advanced-questions-banner {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(30, 41, 59, 0.6));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        
+        /* Two-mode system specific styles */
+        .mode-toggle {
+            position: relative;
+            width: 300px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 50px;
+            padding: 4px;
+            margin: 20px auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .mode-button {
+            width: 50%;
+            padding: 12px 0;
+            border-radius: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        
+        .mode-button.active {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .mode-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .mode-content.active {
+            display: block;
+        }
+        
+        /* Additional project recommendation styles */
+        .project-card {
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .project-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .project-beginner {
+            border-left-color: #10b981;
+        }
+        
+        .project-intermediate {
+            border-left-color: #fbbf24;
+        }
+        
+        .project-advanced {
+            border-left-color: #ef4444;
+        }
+        
+        /* Resume rewrite styles */
+        .resume-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        .original-text {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), transparent);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .optimized-text {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), transparent);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .improvement-badge {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="text-dark-200">
+    <div class="min-h-screen">
+        <header class="glass-card shadow-lg sticky top-0 z-50" style="
+            background: linear-gradient(135deg, 
+                rgba(15, 23, 42, 0.95) 0%, 
+                rgba(30, 41, 59, 0.95) 50%, 
+                rgba(15, 23, 42, 0.95) 100%
+            );
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        ">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between">
+                    <div class="mb-4 md:mb-0">
+                        <h1 class="text-2xl font-bold font-poppins">
+                            <i class="fas fa-brain mr-2" style="
+                                background: linear-gradient(135deg, #3b82f6, #60a5fa);
+                                -webkit-background-clip: text;
+                                -webkit-text-fill-color: transparent;
+                            "></i>
+                            <span class="gradient-text">ATS Resume Intelligence</span>
+                        </h1>
+                        <p class="text-sm text-dark-400 mt-1">
+                            Two-Mode System • Agentic Self-Evaluation • Project Recommendations
+                        </p>
+                    </div>
+                    
+                    <div class="mode-toggle">
+                        <div class="flex">
+                            <div id="mode-candidate" class="mode-button active" onclick="switchMode('candidate')">
+                                <i class="fas fa-user-graduate mr-2"></i>
+                                Candidate Mode
+                            </div>
+                            <div id="mode-recruiter" class="mode-button" onclick="switchMode('recruiter')">
+                                <i class="fas fa-user-tie mr-2"></i>
+                                Recruiter Mode
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-1 bg-dark-800/50 p-1 rounded-xl backdrop-blur-sm mt-4 md:mt-0">
+                        <button 
+                            id="tab-upload" 
+                            class="nav-tab active px-5 py-3 rounded-lg font-medium text-white transition-all duration-200"
+                            onclick="switchTab('upload')"
+                        >
+                            <i class="fas fa-file-upload mr-2"></i>
+                            Upload Resume
+                        </button>
+                        <button 
+                            id="tab-evaluate" 
+                            class="nav-tab px-5 py-3 rounded-lg font-medium text-dark-400 hover:text-dark-200 transition-all duration-200"
+                            onclick="switchTab('evaluate')"
+                        >
+                            <i class="fas fa-search mr-2"></i>
+                            Self Evaluation
+                        </button>
+                        <button 
+                            id="tab-projects" 
+                            class="nav-tab px-5 py-3 rounded-lg font-medium text-dark-400 hover:text-dark-200 transition-all duration-200"
+                            onclick="switchTab('projects')"
+                        >
+                            <i class="fas fa-project-diagram mr-2"></i>
+                            Projects
+                        </button>
+                        <button 
+                            id="tab-rewrite" 
+                            class="nav-tab px-5 py-3 rounded-lg font-medium text-dark-400 hover:text-dark-200 transition-all duration-200"
+                            onclick="switchTab('rewrite')"
+                        >
+                            <i class="fas fa-edit mr-2"></i>
+                            Rewrite Resume
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto px-4 py-8">
+            <!-- Candidate Mode Content -->
+            <div id="mode-candidate-content" class="mode-content active">
+                <!-- Upload Tab (Candidate Mode) -->
+                <div id="content-upload" class="fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="card p-8">
+                            <div class="text-center mb-8">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-primary-900/30 rounded-full mb-4 border border-primary-800/50 floating">
+                                    <i class="fas fa-file-pdf text-2xl text-primary-400"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-white mb-2">Upload Resume</h2>
+                                <p class="text-dark-400">
+                                    Upload your resume once. It will be stored in our database for future use.
+                                </p>
+                            </div>
+
+                            <div 
+                                id="upload-area" 
+                                class="file-upload-area rounded-2xl p-10 text-center cursor-pointer mb-6"
+                                onclick="document.getElementById('resume-file').click()"
+                            >
+                                <div class="mb-6" id="upload-default-state">
+                                    <i class="fas fa-cloud-upload-alt text-5xl text-primary-400 mb-4"></i>
+                                    <h3 class="text-lg font-medium text-dark-200 mb-2">Drag & drop your resume PDF</h3>
+                                    <p class="text-dark-400 mb-4">or click to browse files</p>
+                                </div>
+                                <input 
+                                    type="file" 
+                                    id="resume-file" 
+                                    class="hidden" 
+                                    accept=".pdf"
+                                    onchange="handleFileSelect(event, 'upload')"
+                                >
+                                <div id="file-info" class="hidden">
+                                    <div class="inline-flex items-center bg-primary-900/20 rounded-lg px-4 py-3 border border-primary-800/50">
+                                        <i class="fas fa-file-pdf text-primary-400 mr-3"></i>
+                                        <span id="file-name" class="font-medium text-primary-300"></span>
+                                        <button onclick="removeFile('upload')" class="ml-4 text-dark-400 hover:text-dark-200">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="parse-result" class="hidden success-card p-6 mb-6">
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-10 h-10 bg-green-900/30 rounded-full flex items-center justify-center border border-green-800/50">
+                                            <i class="fas fa-check text-green-400"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4 flex-1">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="font-bold text-green-300 mb-1">Resume uploaded and parsed successfully!</h3>
+                                            <div class="flex space-x-3">
+                                                <button id="save-candidate-db-btn" onclick="saveActiveCandidateToDatabase()" class="text-sm text-green-400 hover:text-green-300 font-semibold border border-green-700/50 px-2 py-1 rounded bg-green-950/20">
+                                                    <i class="fas fa-save mr-1"></i> Save to Database
+                                                </button>
+                                                <button onclick="showAllParsedData()" class="text-sm text-primary-400 hover:text-primary-300">
+                                                    <i class="fas fa-expand mr-1"></i> View All Data
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="parsed-details" class="text-green-400 mt-2">
+                                            <!-- Parsed data will be inserted here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button 
+                                    id="parse-btn" 
+                                    class="btn-primary w-full max-w-xs"
+                                    onclick="uploadAndParseResume()"
+                                    disabled
+                                >
+                                    <span id="parse-btn-text">Upload & Parse</span>
+                                    <div id="parse-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Self Evaluation Tab (Candidate Mode) -->
+                <div id="content-evaluate" class="hidden fade-in">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="card p-8">
+                            <div class="text-center mb-8">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-900/30 rounded-full mb-4 border border-green-800/50 floating-delay-2">
+                                    <i class="fas fa-search text-2xl text-green-400"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-white mb-2">Agentic Self Evaluation</h2>
+                                <p class="text-dark-400">
+                                    Get intelligent AI-powered evaluation with strict score-based logic.
+                                    You must have uploaded your resume first.
+                                </p>
+                            </div>
+
+                            <div class="mb-8">
+                                <div class="bg-blue-900/20 p-4 rounded-xl mb-6 border border-blue-800/30">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-info-circle text-blue-400 mr-3 text-xl"></i>
+                                        <p class="text-blue-300">
+                                            <strong>Note:</strong> You need to upload your resume first. Your resume will be fetched from our database using your Candidate ID.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                                                  <div>
+                                        <div id="self-eval-id-input-container">
+                                            <label class="block text-sm font-medium text-dark-300 mb-3">
+                                                <i class="fas fa-id-card mr-2"></i>
+                                                Your Candidate ID
+                                            </label>
+                                            <div class="flex">
+                                                <input 
+                                                    type="number" 
+                                                    id="candidate-id" 
+                                                    class="flex-1 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                                    placeholder="Enter your candidate ID from upload"
+                                                    oninput="validateCandidateId()"
+                                                >
+                                                <button 
+                                                    onclick="fetchCandidateInfo()" 
+                                                    class="btn-secondary ml-2"
+                                                    id="fetch-candidate-btn"
+                                                >
+                                                    Fetch
+                                                </button>
+                                            </div>
+                                            <div class="mt-2">
+                                                <p class="text-sm text-dark-400">
+                                                    This is the ID you received when you uploaded your resume.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div id="self-eval-id-badge-container" class="hidden"></div>
+                                        <div id="candidate-info" class="hidden mt-4">
+                                            <!-- Candidate info will be displayed here -->
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-3">
+                                            <i class="fas fa-briefcase mr-2"></i>
+                                            Job Description
+                                        </label>
+                                        <textarea 
+                                            id="self-jd-text" 
+                                            class="w-full h-64 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm"
+                                            placeholder="Paste the job description you are applying for..."
+                                            oninput="updateCharCount('self-jd-text', 'self-jd-char-count')"
+                                        ></textarea>
+                                        <div class="flex justify-between mt-2">
+                                            <span class="text-sm text-dark-400">Enter the job description for evaluation</span>
+                                            <span id="self-jd-char-count" class="text-sm text-dark-400">0 characters</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-center mb-10">
+                                <button 
+                                    id="evaluate-btn" 
+                                    class="btn-primary w-full max-w-xs"
+                                    onclick="agenticSelfEvaluate()"
+                                    disabled
+                                >
+                                    <span id="evaluate-btn-text">Evaluate My Fit (AI Agent)</span>
+                                    <div id="evaluate-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                            </div>
+
+                            <!-- Score-Based Agent Decision Display -->
+                            <div id="score-decision-banner" class="hidden mb-6">
+                                <!-- Content will be dynamically generated based on score -->
+                            </div>
+
+                            <!-- Interview Questions Section (Conditional) -->
+                            <div id="questions-section" class="hidden">
+                                <!-- Interview questions will be displayed here if generated -->
+                            </div>
+
+                            <!-- Interview Evaluation Section (Only shown if questions exist) -->
+                            <div id="interview-section" class="hidden mt-10">
+                                <div class="border-t border-dark-700 pt-8">
+                                    <h3 class="text-xl font-bold text-white mb-6">Interactive Interview Practice</h3>
+                                    
+                                    <!-- Current Question -->
+                                    <div id="current-question-container" class="interview-question-card">
+                                        <h4 class="text-lg font-bold text-primary-300 mb-3">Current Question:</h4>
+                                        <p id="current-question-text" class="text-white text-lg mb-4">Click "Start Interview" to begin</p>
+                                        
+                                        <!-- Answer Input -->
+                                        <div class="mt-4">
+                                            <label class="block text-sm font-medium text-dark-300 mb-3">
+                                                <i class="fas fa-comment-dots mr-2"></i>
+                                                Your Answer
+                                            </label>
+                                            <textarea 
+                                                id="interview-answer" 
+                                                class="w-full h-32 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm"
+                                                placeholder="Type your answer here..."
+                                                oninput="updateCharCount('interview-answer', 'answer-char-count')"
+                                            ></textarea>
+                                            <div class="flex justify-between items-center mt-3">
+                                                <span id="answer-char-count" class="text-sm text-dark-400">0 characters</span>
+                                                <button 
+                                                    id="submit-answer-btn" 
+                                                    class="btn-primary"
+                                                    onclick="submitInterviewAnswer()"
+                                                    disabled
+                                                >
+                                                    <span id="submit-answer-btn-text">Submit Answer</span>
+                                                    <div id="submit-answer-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Evaluation Result -->
+                                    <div id="evaluation-result-container" class="evaluation-result-card hidden">
+                                        <h4 class="text-lg font-bold text-green-300 mb-3">Evaluation Result</h4>
+                                        
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                            <div class="text-center">
+                                                <div class="text-4xl font-bold text-white mb-1" id="answer-score">0</div>
+                                                <div class="text-sm text-dark-400">Answer Score</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-lg font-semibold text-white mb-1" id="next-difficulty-text">Same</div>
+                                                <div class="text-sm text-dark-400">Next Difficulty</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-lg font-semibold text-primary-300 mb-1" id="questions-remaining">-</div>
+                                                <div class="text-sm text-dark-400">Session Progress</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="space-y-4">
+                                            <div>
+                                                <h5 class="text-md font-semibold text-white mb-2">Feedback</h5>
+                                                <p id="feedback-text" class="text-dark-200">No feedback yet.</p>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <h5 class="text-md font-semibold text-green-300 mb-2">Strengths</h5>
+                                                    <div id="strengths-list" class="space-y-2">
+                                                        <p class="text-dark-400 italic">Not provided</p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h5 class="text-md font-semibold text-yellow-300 mb-2">Weaknesses</h5>
+                                                    <div id="weaknesses-list" class="space-y-2">
+                                                        <p class="text-dark-400 italic">Not provided</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="text-center mt-6">
+                                                <button 
+                                                    id="next-question-btn" 
+                                                    class="btn-primary"
+                                                    onclick="loadNextQuestion()"
+                                                >
+                                                    <i class="fas fa-forward mr-2"></i>
+                                                    <span id="next-question-btn-text">Continue with Next Question</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Interview Controls -->
+                                    <div class="flex justify-center space-x-4 mt-6">
+                                        <button 
+                                            id="start-interview-btn" 
+                                            class="btn-secondary"
+                                            onclick="startInterviewSession()"
+                                        >
+                                            <i class="fas fa-play mr-2"></i>
+                                            Start Interview
+                                        </button>
+                                        <button 
+                                            id="reset-interview-btn" 
+                                            class="btn-secondary"
+                                            onclick="resetInterviewSession()"
+                                        >
+                                            <i class="fas fa-redo mr-2"></i>
+                                            Reset Interview
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="evaluate-results" class="hidden">
+                                <h3 class="text-xl font-bold text-white mb-6">Evaluation Results</h3>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <div class="lg:col-span-1">
+                                        <div class="card p-6 text-center">
+                                            <h4 class="text-lg font-bold text-dark-300 mb-4">Overall Fit Score</h4>
+                                            <div class="relative w-48 h-48 mx-auto mb-4">
+                                                <svg class="w-full h-full" viewBox="0 0 100 100">
+                                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#334155" stroke-width="8"/>
+                                                    <circle 
+                                                        id="score-circle" 
+                                                        cx="50" cy="50" r="45" fill="none" 
+                                                        stroke="#10b981" 
+                                                        stroke-width="8" 
+                                                        stroke-linecap="round"
+                                                        stroke-dasharray="283"
+                                                        stroke-dashoffset="283"
+                                                        transform="rotate(-90 50 50)"
+                                                    />
+                                                    <text id="score-text" x="50" y="55" text-anchor="middle" font-size="24" font-weight="bold" fill="#f8fafc">0%</text>
+                                                </svg>
+                                            </div>
+                                            <div id="score-category" class="text-sm font-medium text-dark-400">No score yet</div>
+                                            <div id="confidence-level" class="text-xs text-primary-400 mt-1"></div>
+                                            <button 
+                                                id="view-details-btn" 
+                                                class="btn-secondary w-full mt-6"
+                                                onclick="showEvaluationDetails()"
+                                                disabled
+                                            >
+                                                <i class="fas fa-expand mr-2"></i> View Detailed Analysis
+                                            </button>
+                                            <button 
+                                                id="generate-questions-btn" 
+                                                class="btn-secondary w-full mt-3"
+                                                onclick="showInterviewQuestions()"
+                                                disabled
+                                            >
+                                                <i class="fas fa-question-circle mr-2"></i> Interview Questions
+                                            </button>
+                                            <button 
+                                                id="view-roadmap-btn" 
+                                                class="btn-secondary w-full mt-3"
+                                                onclick="showLearningRoadmap()"
+                                                disabled
+                                            >
+                                                <i class="fas fa-road mr-2"></i> Learning Roadmap
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <div class="space-y-6">
+                                            <div class="card p-6">
+                                                <div class="flex items-center justify-between mb-4">
+                                                    <div class="flex items-center">
+                                                        <div class="w-10 h-10 bg-green-900/30 rounded-full flex items-center justify-center mr-3 border border-green-800/50">
+                                                            <i class="fas fa-thumbs-up text-green-400"></i>
+                                                        </div>
+                                                        <h4 class="text-lg font-bold text-white">Key Strengths</h4>
+                                                    </div>
+                                                    <span id="strengths-count" class="score-badge score-90">0 strengths</span>
+                                                </div>
+                                                <div id="strengths-preview" class="scrollable-content">
+                                                    <p class="text-dark-400 italic">Run evaluation to see your strengths.</p>
+                                                </div>
+                                                <button 
+                                                    id="view-strengths-btn"
+                                                    onclick="showStrengthsModal()" 
+                                                    class="btn-secondary w-full mt-4"
+                                                    disabled
+                                                >
+                                                    <i class="fas fa-list-ol mr-2"></i> View All Strengths
+                                                </button>
+                                            </div>
+                                            <div class="card p-6">
+                                                <div class="flex items-center justify-between mb-4">
+                                                    <div class="flex items-center">
+                                                        <div class="w-10 h-10 bg-yellow-900/30 rounded-full flex items-center justify-center mr-3 border border-yellow-800/50">
+                                                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                                        </div>
+                                                        <h4 class="text-lg font-bold text-white">Skill Gaps & Suggestions</h4>
+                                                    </div>
+                                                    <span id="gaps-count" class="score-badge score-70">0 gaps</span>
+                                                </div>
+                                                <div id="gaps-preview" class="scrollable-content">
+                                                    <p class="text-dark-400 italic">Run evaluation to see skill gaps.</p>
+                                                </div>
+                                                <button 
+                                                    id="view-gaps-btn"
+                                                    onclick="showGapsModal()" 
+                                                    class="btn-secondary w-full mt-4"
+                                                    disabled
+                                                >
+                                                    <i class="fas fa-list-ol mr-2"></i> View All Gaps
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Agent Decision Banner -->
+                                <div id="agent-decision-banner" class="hidden mt-6">
+                                    <div class="card p-4 border-l-4 border-primary-500 bg-primary-900/20">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-primary-900/30 rounded-full flex items-center justify-center mr-3 border border-primary-800/50">
+                                                <i class="fas fa-robot text-primary-400"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="text-lg font-bold text-white mb-1">AI Agent Decision</h4>
+                                                <p id="agent-decision-text" class="text-primary-300">Agent is analyzing your profile...</p>
+                                                <div id="agent-actions" class="mt-2 flex flex-wrap gap-2">
+                                                    <!-- Dynamic action badges will appear here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Tab (Candidate Mode) -->
+                <div id="content-projects" class="hidden fade-in">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="card p-8">
+                            <div class="text-center mb-8">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-900/30 rounded-full mb-4 border border-purple-800/50 floating-delay-1">
+                                    <i class="fas fa-project-diagram text-2xl text-purple-400"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-white mb-2">Project Recommendations</h2>
+                                <p class="text-dark-400">
+                                    Get personalized project recommendations based on your evaluation gaps and score.
+                                </p>
+                            </div>
+
+                            <div class="mb-8">
+                                <div class="bg-purple-900/20 p-4 rounded-xl mb-6 border border-purple-800/30">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-info-circle text-purple-400 mr-3 text-xl"></i>
+                                        <p class="text-purple-300">
+                                            <strong>Note:</strong> You need to run a self-evaluation first to get project recommendations based on your score and gaps.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                    <div>
+                                        <div id="projects-id-input-container">
+                                            <label class="block text-sm font-medium text-dark-300 mb-3">
+                                                <i class="fas fa-id-card mr-2"></i>
+                                                Candidate ID
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                id="projects-candidate-id" 
+                                                class="w-full p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                                placeholder="Enter your candidate ID"
+                                                oninput="validateProjectsCandidateId()"
+                                            >
+                                            <p class="text-sm text-dark-400 mt-2">
+                                                This is the ID you received when you uploaded your resume.
+                                            </p>
+                                        </div>
+                                        <div id="projects-id-badge-container" class="hidden"></div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-3">
+                                            <i class="fas fa-chart-line mr-2"></i>
+                                            Evaluation ID (Optional)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            id="evaluation-id" 
+                                            class="w-full p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                            placeholder="Enter evaluation ID from self-evaluation"
+                                        >
+                                        <p class="text-sm text-dark-400 mt-2">
+                                            If provided, we'll use your specific evaluation results for better recommendations.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-3">
+                                            <i class="fas fa-star mr-2"></i>
+                                            Your Score (Optional)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            id="projects-score" 
+                                            min="0"
+                                            max="100"
+                                            class="w-full p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                            placeholder="Enter your score (0-100)"
+                                        >
+                                        <p class="text-sm text-dark-400 mt-2">
+                                            Your evaluation score for project difficulty adjustment.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-3">
+                                            <i class="fas fa-code mr-2"></i>
+                                            Domain (Optional)
+                                        </label>
+                                        <select 
+                                            id="projects-domain" 
+                                            class="w-full p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                        >
+                                            <option value="">Select Domain</option>
+                                            <option value="ML/AI">Machine Learning / AI</option>
+                                            <option value="Web Development">Web Development</option>
+                                            <option value="Mobile Development">Mobile Development</option>
+                                            <option value="Data Science">Data Science</option>
+                                            <option value="DevOps">DevOps</option>
+                                            <option value="Cybersecurity">Cybersecurity</option>
+                                            <option value="Cloud Computing">Cloud Computing</option>
+                                        </select>
+                                        <p class="text-sm text-dark-400 mt-2">
+                                            Specific domain for project recommendations.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="mb-8">
+                                    <label class="block text-sm font-medium text-dark-300 mb-3">
+                                        <i class="fas fa-exclamation-circle mr-2"></i>
+                                        Skill Gaps (Optional)
+                                    </label>
+                                    <textarea 
+                                        id="projects-gaps" 
+                                        class="w-full h-32 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm"
+                                        placeholder="Enter specific skill gaps (one per line or comma separated)..."
+                                    ></textarea>
+                                    <p class="text-sm text-dark-400 mt-2">
+                                        Enter specific skills you want to improve through projects.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="text-center mb-10">
+                                <button 
+                                    id="projects-btn" 
+                                    class="btn-primary w-full max-w-xs"
+                                    onclick="getProjectRecommendations()"
+                                    disabled
+                                >
+                                    <span id="projects-btn-text">Get Project Recommendations</span>
+                                    <div id="projects-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                            </div>
+
+                            <!-- Project Recommendations Results -->
+                            <div id="projects-results" class="hidden">
+                                <h3 class="text-xl font-bold text-white mb-6">Personalized Project Recommendations</h3>
+                                <div id="projects-list" class="space-y-6">
+                                    <!-- Project cards will be inserted here -->
+                                </div>
+                                
+                                <div class="mt-8 p-4 bg-dark-800/50 rounded-xl">
+                                    <h4 class="text-lg font-bold text-primary-300 mb-3">How These Projects Were Selected:</h4>
+                                    <p class="text-dark-300 mb-2">
+                                        Projects are automatically categorized based on your score:
+                                    </p>
+                                    <ul class="list-disc list-inside text-dark-300 space-y-1">
+                                        <li><strong class="text-red-300">Score &lt; 30</strong>: Fundamentals projects (Beginner level)</li>
+                                        <li><strong class="text-yellow-300">Score 30-59</strong>: Small structured projects (Intermediate level)</li>
+                                        <li><strong class="text-blue-300">Score 60-79</strong>: Gap-based targeted projects (Intermediate+ level)</li>
+                                        <li><strong class="text-green-300">Score ≥ 80</strong>: System design / advanced projects (Advanced level)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resume Rewrite Tab (Candidate Mode) -->
+                <div id="content-rewrite" class="hidden fade-in">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="card p-8">
+                            <div class="text-center mb-8">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-900/30 rounded-full mb-4 border border-indigo-800/50 floating-delay-3">
+                                    <i class="fas fa-edit text-2xl text-indigo-400"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-white mb-2">Resume Optimization</h2>
+                                <p class="text-dark-400">
+                                    Get your resume optimized for ATS (Applicant Tracking Systems) with AI-powered rewriting.
+                                </p>
+                            </div>
+
+                            <div class="mb-8">
+                                <div class="bg-indigo-900/20 p-4 rounded-xl mb-6 border border-indigo-800/30">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-info-circle text-indigo-400 mr-3 text-xl"></i>
+                                        <p class="text-indigo-300">
+                                            <strong>Note:</strong> Your resume will be fetched from our database using your Candidate ID.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                    <div>
+                                        <div id="rewrite-id-input-container">
+                                            <label class="block text-sm font-medium text-dark-300 mb-3">
+                                                <i class="fas fa-id-card mr-2"></i>
+                                                Candidate ID
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                id="rewrite-candidate-id" 
+                                                class="w-full p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                                placeholder="Enter your candidate ID"
+                                                oninput="validateRewriteCandidateId()"
+                                            >
+                                            <p class="text-sm text-dark-400 mt-2">
+                                                This is the ID you received when you uploaded your resume.
+                                            </p>
+                                        </div>
+                                        <div id="rewrite-id-badge-container" class="hidden"></div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-3">
+                                            <i class="fas fa-briefcase mr-2"></i>
+                                            Job Description (Optional)
+                                        </label>
+                                        <textarea 
+                                            id="rewrite-jd-text" 
+                                            class="w-full h-48 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm"
+                                            placeholder="Paste a specific job description for targeted optimization..."
+                                            oninput="updateCharCount('rewrite-jd-text', 'rewrite-jd-char-count')"
+                                        ></textarea>
+                                        <div class="flex justify-between mt-2">
+                                            <span class="text-sm text-dark-400">Optional: For targeted optimization</span>
+                                            <span id="rewrite-jd-char-count" class="text-sm text-dark-400">0 characters</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-8">
+                                    <label class="block text-sm font-medium text-dark-300 mb-3">
+                                        <i class="fas fa-bullseye mr-2"></i>
+                                        Focus Areas (Optional)
+                                    </label>
+                                    <textarea 
+                                        id="focus-areas" 
+                                        class="w-full h-24 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm"
+                                        placeholder="Enter specific areas to focus on (e.g., leadership, technical skills, achievements)..."
+                                    ></textarea>
+                                    <p class="text-sm text-dark-400 mt-2">
+                                        Enter specific areas you want to emphasize in your optimized resume.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="text-center mb-10">
+                                <button 
+                                    id="rewrite-btn" 
+                                    class="btn-primary w-full max-w-xs"
+                                    onclick="optimizeResume()"
+                                    disabled
+                                >
+                                    <span id="rewrite-btn-text">Optimize My Resume</span>
+                                    <div id="rewrite-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                            </div>
+
+                            <!-- Resume Rewrite Results -->
+                            <div id="rewrite-results" class="hidden">
+                                <h3 class="text-xl font-bold text-white mb-6">Resume Optimization Results</h3>
+                                
+                                <div class="mb-6 p-4 bg-green-900/20 rounded-xl border border-green-800/30">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-chart-line text-green-400 text-2xl mr-3"></i>
+                                            <div>
+                                                <h4 class="text-lg font-bold text-green-300">ATS Score Improvement</h4>
+                                                <p class="text-green-200 text-2xl font-bold" id="ats-improvement">0%</p>
+                                            </div>
+                                        </div>
+                                        <span class="improvement-badge">
+                                            <i class="fas fa-arrow-up mr-2"></i>
+                                            <span id="improvement-text">Improved</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                    <div>
+                                        <h4 class="text-lg font-bold text-white mb-4">Added Skill Keywords</h4>
+                                        <div id="added-skills" class="space-y-2">
+                                            <!-- Added skills will be displayed here -->
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-bold text-white mb-4">STAR Format Examples</h4>
+                                        <div id="star-examples" class="space-y-4">
+                                            <!-- STAR examples will be displayed here -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="resume-comparison mb-8">
+                                    <div class="original-text p-6 rounded-xl">
+                                        <h4 class="text-lg font-bold text-red-300 mb-4">Original Resume (Excerpt)</h4>
+                                        <div id="original-excerpt" class="text-dark-300">
+                                            <!-- Original resume excerpt will be displayed here -->
+                                        </div>
+                                    </div>
+                                    <div class="optimized-text p-6 rounded-xl">
+                                        <h4 class="text-lg font-bold text-green-300 mb-4">Optimized Resume (Excerpt)</h4>
+                                        <div id="optimized-excerpt" class="text-dark-300">
+                                            <!-- Optimized resume excerpt will be displayed here -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-8">
+                                    <h4 class="text-lg font-bold text-white mb-4">Rewritten Bullet Points</h4>
+                                    <div id="rewritten-bullets" class="space-y-4">
+                                        <!-- Rewritten bullet points will be displayed here -->
+                                    </div>
+                                </div>
+
+                                <div class="text-center">
+                                    <button 
+                                        id="copy-optimized-btn" 
+                                        class="btn-secondary mr-4"
+                                        onclick="copyOptimizedResume()"
+                                    >
+                                        <i class="fas fa-copy mr-2"></i>
+                                        Copy Optimized Resume
+                                    </button>
+                                    <button 
+                                        id="download-optimized-btn" 
+                                        class="btn-primary"
+                                        onclick="downloadOptimizedResume()"
+                                    >
+                                        <i class="fas fa-download mr-2"></i>
+                                        Download as Text
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recruiter Mode Content -->
+            <div id="mode-recruiter-content" class="mode-content">
+                <div class="max-w-6xl mx-auto">
+                    <div class="card p-8">
+                        <div class="text-center mb-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-900/30 rounded-full mb-4 border border-blue-800/50">
+                                <i class="fas fa-user-tie text-2xl text-blue-400"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-white mb-2">Recruiter Mode</h2>
+                            <p class="text-dark-400">
+                                Evaluate job descriptions against candidate database and analyze JD structure.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <!-- JD Rewrite Section -->
+                            <div class="card p-6">
+                                <h3 class="text-lg font-bold text-white mb-4">
+                                    <i class="fas fa-file-edit mr-2 text-primary-400"></i>
+                                    Normalize Job Description
+                                </h3>
+                                <p class="text-dark-400 mb-4">
+                                    Clean up messy job descriptions into structured format.
+                                </p>
+                                
+                                <label class="block text-sm font-medium text-dark-300 mb-3">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    Job Description to Normalize
+                                </label>
+                                <textarea 
+                                    id="recruiter-jd-text" 
+                                    class="w-full h-48 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm mb-4"
+                                    placeholder="Paste messy job description here..."
+                                ></textarea>
+                                
+                                <button 
+                                    id="rewrite-jd-btn" 
+                                    class="btn-primary w-full"
+                                    onclick="rewriteJD()"
+                                >
+                                    <span id="rewrite-jd-btn-text">Normalize JD</span>
+                                    <div id="rewrite-jd-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                                
+                                <div id="jd-rewrite-results" class="hidden mt-6">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h4 class="text-lg font-bold text-primary-300">Normalized JD Structure</h4>
+                                        <button onclick="copyNormalizedJDToClipboard()" class="btn-secondary text-xs py-2 px-3 flex items-center" id="copy-jd-btn">
+                                            <i class="far fa-copy mr-1"></i> Copy Formatted JD
+                                        </button>
+                                    </div>
+                                    <div id="normalized-jd-content" class="space-y-3">
+                                        <!-- Normalized JD will be displayed here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Evaluate JD Section -->
+                            <div class="card p-6">
+                                <h3 class="text-lg font-bold text-white mb-4">
+                                    <i class="fas fa-search mr-2 text-green-400"></i>
+                                    Find Matching Candidates
+                                </h3>
+                                <p class="text-dark-400 mb-4">
+                                    Find and rank candidates based on job description.
+                                </p>
+                                
+                                <label class="block text-sm font-medium text-dark-300 mb-3">
+                                    <i class="fas fa-briefcase mr-2"></i>
+                                    Job Description to Match
+                                </label>
+                                <textarea 
+                                    id="recruiter-match-jd" 
+                                    class="w-full h-48 p-4 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-dark-200 backdrop-blur-sm mb-4"
+                                    placeholder="Paste job description to find candidates..."
+                                ></textarea>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-2">Domain Filter</label>
+                                        <select 
+                                            id="recruiter-domain" 
+                                            class="w-full p-3 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                        >
+                                            <option value="">All Domains</option>
+                                            <option value="ML/AI">ML/AI</option>
+                                            <option value="Backend">Backend</option>
+                                            <option value="Frontend">Frontend</option>
+                                            <option value="Data">Data Science</option>
+                                            <option value="Full Stack">Full Stack</option>
+                                            <option value="DevOps">DevOps</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-dark-300 mb-2">Top K</label>
+                                        <select 
+                                            id="recruiter-top-k" 
+                                            class="w-full p-3 bg-dark-800/50 border border-dark-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-dark-200 backdrop-blur-sm"
+                                        >
+                                            <option value="3">3</option>
+                                            <option value="5" selected>5</option>
+                                            <option value="10">10</option>
+                                            <option value="15">15</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    id="evaluate-jd-btn" 
+                                    class="btn-primary w-full"
+                                    onclick="evaluateJD()"
+                                >
+                                    <span id="evaluate-jd-btn-text">Find Candidates</span>
+                                    <div id="evaluate-jd-spinner" class="hidden loading-spinner w-5 h-5 ml-2 inline-block"></div>
+                                </button>
+                                
+                                <div id="jd-evaluate-results" class="hidden mt-6">
+                                    <h4 class="text-lg font-bold text-green-300 mb-4">Top Matching Candidates</h4>
+                                    <div id="matching-candidates" class="space-y-4">
+                                        <!-- Matching candidates will be displayed here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="details-modal" class="modal">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center border-b border-dark-700 pb-4 mb-6">
+                <h3 class="text-2xl font-bold text-white"><i class="fas fa-chart-bar mr-2 text-primary-400"></i> Detailed Evaluation Report</h3>
+                <button onclick="closeModal('details-modal')" class="text-dark-400 hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-details-content" class="text-dark-300 space-y-4">
+                <p class="text-dark-400">Loading comprehensive breakdown...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="questions-modal" class="modal">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center border-b border-dark-700 pb-4 mb-6">
+                <h3 class="text-2xl font-bold text-white"><i class="fas fa-question-circle mr-2 text-primary-400"></i> Interview Questions</h3>
+                <button onclick="closeModal('questions-modal')" class="text-dark-400 hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-questions-content" class="scrollable-content space-y-4">
+                <p class="text-dark-400">Interview questions will appear here.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="parsed-data-modal" class="modal">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center border-b border-dark-700 pb-4 mb-6">
+                <h3 class="text-2xl font-bold text-white"><i class="fas fa-file-alt mr-2 text-primary-400"></i> All Parsed Resume Data</h3>
+                <button onclick="closeModal('parsed-data-modal')" class="text-dark-400 hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-parsed-content" class="scrollable-content space-y-4">
+                <p class="text-dark-400">Loading parsed data...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="roadmap-modal" class="modal">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center border-b border-dark-700 pb-4 mb-6">
+                <h3 class="text-2xl font-bold text-white"><i class="fas fa-road mr-2 text-primary-400"></i> Personalized Learning Roadmap</h3>
+                <button onclick="closeModal('roadmap-modal')" class="text-dark-400 hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-roadmap-content" class="scrollable-content space-y-4">
+                <p class="text-dark-400">Learning roadmap will appear here.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // --- Configuration ---
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        // Global store for evaluation data
+        let currentEvaluationData = null;
+        let currentParsedResumeData = null;
+        let currentCandidateId = localStorage.getItem('current_candidate_id') ? parseInt(localStorage.getItem('current_candidate_id')) : null;
+        let currentCandidateInfo = null;
+        let currentNormalizedJDData = null;
+        
+        // Interview session state
+        let interviewSessionId = null;
+        let interviewQuestions = [];
+        let currentQuestionIndex = 0;
+        let interviewRole = '';
+        let interviewDomain = '';
+
+        // --- Utility Functions ---
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const colorClass = type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-green-600';
+            const iconClass = type === 'error' ? 'fa-exclamation-triangle' : type === 'warning' ? 'fa-exclamation' : 'fa-check-circle';
+
+            const toast = document.createElement('div');
+            toast.className = `toast p-4 rounded-xl shadow-lg flex items-center text-white ${colorClass}`;
+            toast.innerHTML = `<i class="fas ${iconClass} mr-3"></i> ${message}`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        function toggleLoading(buttonId, spinnerId, isLoading, defaultText) {
+            const button = document.getElementById(buttonId);
+            const spinner = document.getElementById(spinnerId);
+            const textSpan = button.querySelector('span') || document.getElementById(buttonId + '-text');
+
+            if (isLoading) {
+                button.disabled = true;
+                if (textSpan) textSpan.textContent = 'Processing...';
+                if (spinner) spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                if (textSpan) textSpan.textContent = defaultText;
+                if (spinner) spinner.classList.add('hidden');
+            }
+        }
+
+        function updateCharCount(textareaId, countId) {
+            const textarea = document.getElementById(textareaId);
+            const countSpan = document.getElementById(countId);
+            if (textarea && countSpan) {
+                countSpan.textContent = `${textarea.value.length} characters`;
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // --- Mode Switching Logic ---
+
+        function switchMode(mode) {
+            // Update mode toggle buttons
+            document.getElementById('mode-candidate').classList.toggle('active', mode === 'candidate');
+            document.getElementById('mode-recruiter').classList.toggle('active', mode === 'recruiter');
+            
+            // Update mode content
+            document.getElementById('mode-candidate-content').classList.toggle('active', mode === 'candidate');
+            document.getElementById('mode-recruiter-content').classList.toggle('active', mode === 'recruiter');
+            
+            // Reset to first tab of the mode
+            if (mode === 'candidate') {
+                switchTab('upload');
+            } else {
+                // Recruiter mode has different tab structure
+                document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active', 'text-white'));
+                document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.add('text-dark-400', 'hover:text-dark-200'));
+            }
+            
+            showToast(`Switched to ${mode === 'candidate' ? 'Candidate' : 'Recruiter'} Mode`, 'info');
+        }
+
+        // --- Tab Switching Logic (Candidate Mode) ---
+
+        function switchTab(activeTab) {
+            // Only update tabs in candidate mode
+            if (!document.getElementById('mode-candidate-content').classList.contains('active')) return;
+            
+            ['upload', 'evaluate', 'projects', 'rewrite'].forEach(tab => {
+                document.getElementById(`tab-${tab}`)?.classList?.remove('active', 'text-white');
+                document.getElementById(`tab-${tab}`)?.classList?.add('text-dark-400', 'hover:text-dark-200');
+                document.getElementById(`content-${tab}`)?.classList?.add('hidden');
+            });
+
+            document.getElementById(`tab-${activeTab}`)?.classList?.add('active', 'text-white');
+            document.getElementById(`tab-${activeTab}`)?.classList?.remove('text-dark-400', 'hover:text-dark-200');
+            document.getElementById(`content-${activeTab}`)?.classList?.remove('hidden');
+
+            if (activeTab === 'evaluate') {
+                validateCandidateId();
+            }
+        }
+
+        // --- File Upload Logic ---
+
+        function handleFileSelect(event, context) {
+            const input = event.target;
+            const file = input.files[0];
+            const fileInfoElement = context === 'upload' ? document.getElementById('file-info') : document.getElementById('self-file-info');
+            const fileNameElement = context === 'upload' ? document.getElementById('file-name') : document.getElementById('self-file-name');
+            const defaultStateElement = context === 'upload' ? document.getElementById('upload-default-state') : document.getElementById('self-upload-default-state');
+            const parseBtn = document.getElementById('parse-btn');
+
+            if (file) {
+                if (file.type !== 'application/pdf') {
+                    showToast("Only PDF files are supported.", "error");
+                    input.value = '';
+                    return;
+                }
+                
+                fileNameElement.textContent = file.name;
+                defaultStateElement.classList.add('hidden');
+                fileInfoElement.classList.remove('hidden');
+
+                if (context === 'upload') {
+                    parseBtn.disabled = false;
+                }
+            } else {
+                removeFile(context);
+            }
+        }
+        
+        function removeFile(context) {
+            const input = context === 'upload' ? document.getElementById('resume-file') : document.getElementById('self-resume-file');
+            const fileInfoElement = context === 'upload' ? document.getElementById('file-info') : document.getElementById('self-file-info');
+            const defaultStateElement = context === 'upload' ? document.getElementById('upload-default-state') : document.getElementById('self-upload-default-state');
+            const parseBtn = document.getElementById('parse-btn');
+            const parseResult = document.getElementById('parse-result');
+
+            input.value = '';
+            fileInfoElement.classList.add('hidden');
+            defaultStateElement.classList.remove('hidden');
+            
+            if (context === 'upload') {
+                parseBtn.disabled = true;
+                parseResult.classList.add('hidden');
+            }
+        }
+
+        // Drag & Drop
+        const uploadArea = document.getElementById('upload-area');
+        if (uploadArea) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => uploadArea.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('dragover'), false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            uploadArea.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                document.getElementById('resume-file').files = files;
+                handleFileSelect({ target: document.getElementById('resume-file') }, 'upload');
+            }
+        }
+
+        // --- Core API Functions ---
+
+        /**
+         * 1. Upload Resume (Candidate Mode)
+         */
+        async function uploadAndParseResume() {
+            const input = document.getElementById('resume-file');
+            const file = input.files[0];
+
+            if (!file) {
+                showToast("Please select a PDF file first.", "warning");
+                return;
+            }
+
+            toggleLoading('parse-btn', 'parse-spinner', true, 'Upload & Parse');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/upload-resume`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentParsedResumeData = data;
+                    currentCandidateId = data.candidate_id;
+                    
+                    // Show Save to Database button since this is a new parse
+                    const saveBtn = document.getElementById('save-candidate-db-btn');
+                    if (saveBtn) {
+                        saveBtn.classList.remove('hidden');
+                    }
+                    
+                    // Display parsed data
+                    const parsed = data.parsed_data || {};
+                    const parsedDetails = document.getElementById('parsed-details');
+                    
+                    if (parsedDetails) {
+                        parsedDetails.innerHTML = `
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="info-item">
+                                        <div class="info-label">Candidate ID</div>
+                                        <div class="info-value font-semibold">${data.candidate_id || 'In-Memory Session'}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">Name</div>
+                                        <div class="info-value font-semibold">${parsed.name || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="info-item">
+                                        <div class="info-label">Role</div>
+                                        <div class="info-value">${parsed.role || 'N/A'}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">Domain</div>
+                                        <div class="info-value">${parsed.domain || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="info-item">
+                                        <div class="info-label">Experience</div>
+                                        <div class="info-value">${parsed.experience || 'N/A'} years</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">Skills</div>
+                                        <div class="skills-container">
+                                            ${(parsed.skills || []).slice(0, 5).map(skill => `
+                                                <span class="skill-pill">${skill}</span>
+                                            `).join('')}
+                                            ${(parsed.skills || []).length > 5 ? `<span class="skill-pill">+${parsed.skills.length - 5} more</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    document.getElementById('parse-result').classList.remove('hidden');
+                    
+                    // Auto-fill candidate ID in other tabs
+                    syncCandidateIdUI();
+                    
+                    showToast(`Resume uploaded successfully! Candidate ID: ${data.candidate_id}`, 'success');
+
+                } else {
+                    showToast(`Upload Failed: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error during upload. Is the backend running?', 'error');
+            } finally {
+                toggleLoading('parse-btn', 'parse-spinner', false, 'Upload & Parse');
+            }
+        }
+
+        /**
+         * Show all parsed data in modal
+         */
+        function showAllParsedData() {
+            if (!currentParsedResumeData) {
+                showToast("No parsed data available.", "warning");
+                return;
+            }
+
+            const parsed = currentParsedResumeData.parsed_data || {};
+            const modalContent = document.getElementById('modal-parsed-content');
+            
+            if (modalContent) {
+                modalContent.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="bg-dark-800 p-6 rounded-xl">
+                            <h4 class="text-xl font-bold text-primary-300 mb-4">Candidate Information</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-dark-400">Candidate ID</p>
+                                    <p class="text-white font-semibold">${currentParsedResumeData.candidate_id}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Name</p>
+                                    <p class="text-white font-semibold">${parsed.name || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Email</p>
+                                    <p class="text-white">${parsed.email || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Phone</p>
+                                    <p class="text-white">${parsed.phone_number || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Role</p>
+                                    <p class="text-white">${parsed.role || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Domain</p>
+                                    <p class="text-white">${parsed.domain || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Experience</p>
+                                    <p class="text-white">${parsed.experience || 'N/A'} years</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-dark-400">Education</p>
+                                    <p class="text-white">${parsed.highest_education || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${parsed.summary_text ? `
+                        <div class="bg-dark-800 p-6 rounded-xl">
+                            <h4 class="text-xl font-bold text-primary-300 mb-3">Professional Summary</h4>
+                            <p class="text-dark-200 leading-relaxed">${parsed.summary_text}</p>
+                        </div>
+                        ` : ''}
+                        
+                        ${parsed.skills && parsed.skills.length > 0 ? `
+                        <div class="bg-dark-800 p-6 rounded-xl">
+                            <h4 class="text-xl font-bold text-primary-300 mb-4">Skills (${parsed.skills.length})</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${parsed.skills.map(skill => `
+                                    <span class="pill">${skill}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('parsed-data-modal').classList.add('active');
+        }
+
+        /**
+         * 2. Agentic Self Evaluation
+         */
+        function validateCandidateId() {
+            const candidateId = document.getElementById('candidate-id')?.value;
+            const evaluateBtn = document.getElementById('evaluate-btn');
+            const jdText = document.getElementById('self-jd-text')?.value?.trim();
+            
+            evaluateBtn.disabled = !(candidateId && jdText && jdText.length > 50);
+        }
+
+        async function fetchCandidateInfo() {
+            const candidateId = document.getElementById('candidate-id')?.value;
+            
+            if (!candidateId) {
+                showToast("Please enter a candidate ID first.", "warning");
+                return;
+            }
+
+            toggleLoading('fetch-candidate-btn', null, true, 'Fetch');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/${candidateId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCandidateId = parseInt(candidateId);
+                    currentParsedResumeData = data;
+                    syncCandidateIdUI();
+                    showToast("Candidate ID verified. Profile loaded successfully.", "success");
+                } else {
+                    showToast(`Could not verify Candidate ID: ${data.detail || 'Not found'}`, "error");
+                }
+            } catch (error) {
+                console.error("Fetch candidate error:", error);
+                showToast("Could not fetch candidate info. Is the backend running?", "error");
+            } finally {
+                toggleLoading('fetch-candidate-btn', null, false, 'Fetch');
+            }
+        }
+
+        async function agenticSelfEvaluate() {
+            const candidateId = document.getElementById('candidate-id')?.value;
+            const jdText = document.getElementById('self-jd-text')?.value?.trim();
+
+            if (!candidateId || !jdText || jdText.length < 50) {
+                showToast("Please enter candidate ID and job description (min 50 chars).", "warning");
+                return;
+            }
+
+            toggleLoading('evaluate-btn', 'evaluate-spinner', true, 'Evaluate My Fit (AI Agent)');
+            
+            // Hide previous results
+            document.getElementById('evaluate-results').classList.add('hidden');
+            document.getElementById('score-decision-banner').classList.add('hidden');
+            document.getElementById('questions-section').classList.add('hidden');
+            document.getElementById('interview-section').classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/agent-self-evaluation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidate_id: currentCandidateId || null,
+                        candidate_data: currentCandidateId ? null : (currentParsedResumeData ? currentParsedResumeData.parsed_data : null),
+                        jd_text: jdText
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentEvaluationData = data;
+                    renderAgenticEvaluationResults(data);
+                    document.getElementById('evaluate-results').classList.remove('hidden');
+                    
+                    if (data.status === 'success') {
+                        showToast(`AI Agent evaluation complete! Score: ${data.score_100}%`, 'success');
+                    } else {
+                        showToast(`Evaluation completed with status: ${data.status}`, 'warning');
+                    }
+                } else {
+                    showToast(`Evaluation Failed: ${data.detail || 'Could not perform evaluation.'}`, 'error');
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error during evaluation. Is the backend running?', 'error');
+            } finally {
+                toggleLoading('evaluate-btn', 'evaluate-spinner', false, 'Evaluate My Fit (AI Agent)');
+            }
+        }
+
+        function renderAgenticEvaluationResults(data) {
+            // Extract score
+            const score = data.score_100 || 0;
+            const circle = document.getElementById('score-circle');
+            const scoreText = document.getElementById('score-text');
+            
+            if (circle && scoreText) {
+                const circumference = 2 * Math.PI * 45;
+                const offset = circumference - (score / 100) * circumference;
+
+                // Update Score Circle
+                circle.style.strokeDashoffset = offset;
+                circle.style.stroke = getScoreColor(score);
+                scoreText.textContent = `${score}%`;
+            }
+            
+            const scoreCategory = document.getElementById('score-category');
+            if (scoreCategory) scoreCategory.textContent = getScoreCategory(score);
+            
+            // Render score-based decision banner
+            renderScoreDecisionBanner(score, data.interview_questions?.length > 0);
+            
+            // Enable buttons based on data availability
+            const viewDetailsBtn = document.getElementById('view-details-btn');
+            const generateQuestionsBtn = document.getElementById('generate-questions-btn');
+            const viewRoadmapBtn = document.getElementById('view-roadmap-btn');
+            const viewStrengthsBtn = document.getElementById('view-strengths-btn');
+            const viewGapsBtn = document.getElementById('view-gaps-btn');
+            
+            if (viewDetailsBtn) viewDetailsBtn.disabled = false;
+            if (generateQuestionsBtn) generateQuestionsBtn.disabled = !(data.interview_questions && data.interview_questions.length > 0);
+            if (viewRoadmapBtn) viewRoadmapBtn.disabled = !(data.learning_roadmap && data.learning_roadmap.length > 0);
+            if (viewStrengthsBtn) viewStrengthsBtn.disabled = !(data.strengths && data.strengths.length > 0);
+            if (viewGapsBtn) viewGapsBtn.disabled = !(data.gaps && data.gaps.length > 0);
+
+            // Render Strengths Preview
+            const strengthsPreview = document.getElementById('strengths-preview');
+            const strengthsCount = document.getElementById('strengths-count');
+            if (strengthsPreview && strengthsCount) {
+                if (data.strengths && data.strengths.length > 0) {
+                    strengthsPreview.innerHTML = data.strengths.slice(0, 3).map(s => `
+                        <div class="strength-item">
+                            <p class="font-medium text-green-200"><i class="fas fa-check-circle mr-2 text-green-400"></i> ${s}</p>
+                        </div>
+                    `).join('');
+                    strengthsCount.textContent = `${data.strengths.length} strengths`;
+                } else {
+                    strengthsPreview.innerHTML = '<p class="text-dark-400 italic">No major strengths identified.</p>';
+                    strengthsCount.textContent = '0 strengths';
+                }
+            }
+
+            // Render Gaps Preview
+            const gapsPreview = document.getElementById('gaps-preview');
+            const gapsCount = document.getElementById('gaps-count');
+            if (gapsPreview && gapsCount) {
+                if (data.gaps && data.gaps.length > 0) {
+                    gapsPreview.innerHTML = data.gaps.slice(0, 3).map(g => `
+                        <div class="gap-item">
+                            <p class="font-medium text-yellow-200"><i class="fas fa-exclamation-circle mr-2 text-yellow-400"></i> ${g}</p>
+                        </div>
+                    `).join('');
+                    gapsCount.textContent = `${data.gaps.length} gaps`;
+                } else {
+                    gapsPreview.innerHTML = '<p class="text-dark-400 italic">No significant gaps found. Great fit!</p>';
+                    gapsCount.textContent = '0 gaps';
+                }
+            }
+
+            // Show agent decision banner
+            const agentBanner = document.getElementById('agent-decision-banner');
+            const agentDecisionText = document.getElementById('agent-decision-text');
+            const agentActions = document.getElementById('agent-actions');
+            
+            if (agentBanner && agentDecisionText && agentActions) {
+                if (data.decision_reasoning) {
+                    agentBanner.classList.remove('hidden');
+                    agentDecisionText.textContent = data.decision_reasoning;
+                    
+                    agentActions.innerHTML = '';
+                    
+                    if (data.interview_questions && data.interview_questions.length > 0) {
+                        agentActions.innerHTML += `
+                            <span class="pill bg-blue-900/30 text-blue-300">
+                                <i class="fas fa-question-circle mr-1"></i>
+                                ${data.interview_questions.length} Interview Questions
+                            </span>
+                        `;
+                        
+                        // Store questions for interview session
+                        interviewQuestions = data.interview_questions;
+                        interviewRole = data.role || '';
+                        interviewDomain = data.domain || '';
+                        
+                        // Show questions section
+                        renderQuestions(data.interview_questions);
+                    }
+                    
+                    if (data.learning_roadmap && data.learning_roadmap.length > 0) {
+                        agentActions.innerHTML += `
+                            <span class="pill bg-purple-900/30 text-purple-300">
+                                <i class="fas fa-road mr-1"></i> ${data.learning_roadmap.length} Learning Steps
+                            </span>
+                        `;
+                    }
+                    
+                    if (data.strengths && data.strengths.length > 0) {
+                        agentActions.innerHTML += `
+                            <span class="pill bg-green-900/30 text-green-300">
+                                <i class="fas fa-thumbs-up mr-1"></i> ${data.strengths.length} Strengths
+                            </span>
+                        `;
+                    }
+                } else {
+                    agentBanner.classList.add('hidden');
+                }
+            }
+        }
+
+        function renderScoreDecisionBanner(score, hasQuestions) {
+            const banner = document.getElementById('score-decision-banner');
+            if (!banner) return;
+            
+            banner.classList.remove('hidden');
+            
+            if (score < 30) {
+                // 🔴 Score < 30: No questions
+                banner.innerHTML = `
+                    <div class="no-questions-banner">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center mr-4 border border-red-800/50">
+                                <i class="fas fa-ban text-red-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-red-300 mb-1">Score: ${score}% (Fundamentals First)</h4>
+                                <p class="text-red-200">Based on your score, the AI agent has decided <strong>NOT to generate interview questions</strong>.</p>
+                                <p class="text-dark-300 mt-2">Focus on building core technical skills and confidence first. Check the learning roadmap for guidance.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (score >= 30 && score < 60) {
+                // 🟡 Score 30-59: Basic questions only
+                banner.innerHTML = `
+                    <div class="basic-questions-banner">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-yellow-900/30 rounded-full flex items-center justify-center mr-4 border border-yellow-800/50">
+                                <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-yellow-300 mb-1">Score: ${score}% (Confidence Building)</h4>
+                                <p class="text-yellow-200">Based on your score, the AI agent has generated <strong>basic interview questions only</strong>.</p>
+                                <p class="text-dark-300 mt-2">Focus on building confidence and addressing key skill gaps before advanced interview preparation.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (score >= 60 && score < 80) {
+                // 🟠 Score 60-79: Gap analysis questions
+                banner.innerHTML = `
+                    <div class="card border-l-4 border-blue-500 bg-blue-900/20 p-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-900/30 rounded-full flex items-center justify-center mr-4 border border-blue-800/50">
+                                <i class="fas fa-chart-line text-blue-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-blue-300 mb-1">Score: ${score}% (Gap Analysis)</h4>
+                                <p class="text-blue-200">Based on your score, the AI agent has generated <strong>gap-focused interview questions</strong>.</p>
+                                <p class="text-dark-300 mt-2">Targeted questions to help you address specific skill gaps and improve your interview performance.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 🟢 Score ≥ 80: Advanced questions
+                banner.innerHTML = `
+                    <div class="advanced-questions-banner">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-900/30 rounded-full flex items-center justify-center mr-4 border border-green-800/50">
+                                <i class="fas fa-trophy text-green-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-green-300 mb-1">Score: ${score}% (Advanced Preparation)</h4>
+                                <p class="text-green-200">Based on your score, the AI agent has generated <strong>advanced interview questions</strong>.</p>
+                                <p class="text-dark-300 mt-2">Excellent fit! Focus on polishing your interview skills and preparing for complex scenarios.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Show/Hide interview section based on score and questions
+            const interviewSection = document.getElementById('interview-section');
+            if (hasQuestions && score >= 30) {
+                interviewSection.classList.remove('hidden');
+            } else {
+                interviewSection.classList.add('hidden');
+            }
+        }
+
+        function renderQuestions(questions) {
+            const questionsSection = document.getElementById('questions-section');
+            if (!questionsSection) return;
+            
+            questionsSection.classList.remove('hidden');
+            questionsSection.innerHTML = `
+                <div class="border-t border-dark-700 pt-6 mt-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Interview Questions</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        ${questions.map((question, index) => `
+                            <div class="question-item">
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-primary-900/30 rounded-full flex items-center justify-center mr-3 border border-primary-800/50 flex-shrink-0">
+                                        <span class="text-primary-300 font-bold">${index + 1}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-white">${question}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getScoreColor(score) {
+            if (score >= 90) return '#10b981';
+            if (score >= 80) return '#4ade80';
+            if (score >= 70) return '#fbbf24';
+            if (score >= 60) return '#fb923c';
+            return '#f87171';
+        }
+
+        function getScoreCategory(score) {
+            if (score >= 90) return 'Exceptional Fit: Top Tier Candidate';
+            if (score >= 80) return 'Strong Fit: Highly Recommended';
+            if (score >= 70) return 'Good Fit: Meets Most Requirements';
+            if (score >= 60) return 'Moderate Fit: Some Gaps';
+            return 'Low Fit: Significant Gaps Identified';
+        }
+
+        /**
+         * 3. Project Recommendations
+         */
+        function validateProjectsCandidateId() {
+            const candidateId = document.getElementById('projects-candidate-id')?.value;
+            const projectsBtn = document.getElementById('projects-btn');
+            
+            projectsBtn.disabled = !candidateId;
+        }
+
+        async function getProjectRecommendations() {
+            const candidateId = document.getElementById('projects-candidate-id')?.value;
+            const evaluationId = document.getElementById('evaluation-id')?.value;
+            const score = document.getElementById('projects-score')?.value;
+            const domain = document.getElementById('projects-domain')?.value;
+            const gapsText = document.getElementById('projects-gaps')?.value;
+
+            if (!candidateId) {
+                showToast("Please enter a candidate ID.", "warning");
+                return;
+            }
+
+            toggleLoading('projects-btn', 'projects-spinner', true, 'Get Project Recommendations');
+
+            // Parse gaps if provided
+            let gaps = [];
+            if (gapsText) {
+                gaps = gapsText.split(/[\n,]/).map(gap => gap.trim()).filter(gap => gap.length > 0);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/projects`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidate_id: currentCandidateId || null,
+                        candidate_data: currentCandidateId ? null : (currentParsedResumeData ? currentParsedResumeData.parsed_data : null),
+                        evaluation_id: evaluationId ? parseInt(evaluationId) : null,
+                        score: score ? parseFloat(score) : null,
+                        domain: domain || null,
+                        gaps: gaps.length > 0 ? gaps : null
+                    }),
+                });
+
+                // Check if response is ok
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Check if data is valid
+                if (!data || !Array.isArray(data)) {
+                    throw new Error('Invalid response format from server');
+                }
+
+                // Check if we got any projects
+                if (data.length === 0) {
+                    showToast("No project recommendations generated. Please try with different parameters.", "info");
+                }
+
+                renderProjectRecommendations(data);
+                document.getElementById('projects-results').classList.remove('hidden');
+                showToast(`Generated ${data.length} project recommendation(s)!`, 'success');
+
+            } catch (error) {
+                console.error('API Error:', error);
+                
+                // Show user-friendly error message
+                let errorMessage = error.message || 'Failed to get project recommendations';
+                
+                // Check for specific database errors
+                if (errorMessage.includes('project_type') || errorMessage.includes('PGRST204') || errorMessage.includes('schema cache')) {
+                    errorMessage = "Database configuration issue. Please add 'project_type' column to candidate_projects table in Supabase.";
+                } else if (errorMessage.includes('Network')) {
+                    errorMessage = "Network error. Please check if backend is running on http://127.0.0.1:8000";
+                } else if (errorMessage.includes('404')) {
+                    errorMessage = "Endpoint not found. Please check if the backend is running with candidate/projects endpoint.";
+                }
+                
+                showToast(`Error: ${errorMessage}`, 'error');
+                
+                // Show fallback projects for debugging
+                showFallbackProjects();
+            } finally {
+                toggleLoading('projects-btn', 'projects-spinner', false, 'Get Project Recommendations');
+            }
+        }
+
+        // Add this fallback function for debugging
+        function showFallbackProjects() {
+            const projectsList = document.getElementById('projects-list');
+            if (!projectsList) return;
+            
+            const fallbackProjects = [
+                {
+                    project_title: "Sample Machine Learning Project",
+                    project_description: "Build a basic ML model to predict housing prices",
+                    expected_outcome: "Understand ML workflow and model evaluation",
+                    difficulty_level: "Beginner",
+                    tools_required: ["Python", "Scikit-learn", "Pandas"],
+                    dataset_suggestions: ["Boston Housing Dataset"],
+                    time_estimate: "2 weeks",
+                    project_type: "fundamentals"
+                },
+                {
+                    project_title: "Web API Development",
+                    project_description: "Create a RESTful API with authentication and database",
+                    expected_outcome: "Learn backend development and API design",
+                    difficulty_level: "Intermediate",
+                    tools_required: ["Node.js", "Express", "MongoDB", "JWT"],
+                    dataset_suggestions: [],
+                    time_estimate: "3 weeks",
+                    project_type: "small_structured"
+                }
+            ];
+            
+            // *** THIS ALSO CALLS renderProjectRecommendations ***
+            renderProjectRecommendations(fallbackProjects);
+            document.getElementById('projects-results').classList.remove('hidden');
+            showToast("Showing sample projects for demonstration", "info");
+        }
+
+        // ===========================================================
+        // ADD THIS FUNCTION RIGHT HERE (after showFallbackProjects)
+        // ===========================================================
+
+        /**
+         * Render project recommendations to the UI
+         */
+        function renderProjectRecommendations(projects) {
+            const projectsList = document.getElementById('projects-list');
+            if (!projectsList) return;
+
+            if (!projects || projects.length === 0) {
+                projectsList.innerHTML = `
+                    <div class="card p-6 text-center">
+                        <i class="fas fa-project-diagram text-4xl text-dark-400 mb-4"></i>
+                        <h4 class="text-lg font-bold text-white mb-2">No Projects Generated</h4>
+                        <p class="text-dark-400">No project recommendations were generated. Please try with different parameters.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            projectsList.innerHTML = projects.map((project, index) => {
+                // Determine project type styling
+                let typeClass = '';
+                let typeText = '';
+                
+                switch(project.project_type) {
+                    case 'fundamentals':
+                        typeClass = 'project-beginner';
+                        typeText = 'Fundamentals (Beginner)';
+                        break;
+                    case 'small_structured':
+                        typeClass = 'project-intermediate';
+                        typeText = 'Structured (Intermediate)';
+                        break;
+                    case 'gap_based_targeted':
+                        typeClass = 'project-advanced';
+                        typeText = 'Targeted (Intermediate+)';
+                        break;
+                    case 'advanced_system_design':
+                        typeClass = 'project-advanced';
+                        typeText = 'Advanced (Expert)';
+                        break;
+                    default:
+                        typeClass = '';
+                        typeText = project.project_type || 'General';
+                }
+
+                return `
+                    <div class="card project-card ${typeClass} p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <span class="w-8 h-8 bg-primary-900/30 rounded-full flex items-center justify-center mr-3 border border-primary-800/50">
+                                        <span class="text-primary-300 font-bold">${index + 1}</span>
+                                    </span>
+                                    <h4 class="text-lg font-bold text-white">${project.project_title}</h4>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full ${getDifficultyClass(project.difficulty_level)}">
+                                        ${project.difficulty_level}
+                                    </span>
+                                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-dark-800/50 text-dark-300 ml-2">
+                                        ${typeText}
+                                    </span>
+                                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-primary-900/30 text-primary-300 ml-2">
+                                        ${project.time_estimate}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="text-md font-semibold text-white mb-2">Description</h5>
+                            <p class="text-dark-300">${project.project_description}</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="text-md font-semibold text-white mb-2">Expected Outcome</h5>
+                            <p class="text-dark-300">${project.expected_outcome}</p>
+                        </div>
+                        
+                        ${project.tools_required && project.tools_required.length > 0 ? `
+                        <div class="mb-4">
+                            <h5 class="text-md font-semibold text-white mb-2">Tools Required</h5>
+                            <div class="flex flex-wrap gap-2">
+                                ${project.tools_required.map(tool => `
+                                    <span class="pill bg-blue-900/30 text-blue-300">${tool}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${project.dataset_suggestions && project.dataset_suggestions.length > 0 ? `
+                        <div class="mb-4">
+                            <h5 class="text-md font-semibold text-white mb-2">Dataset Suggestions</h5>
+                            <div class="flex flex-wrap gap-2">
+                                ${project.dataset_suggestions.map(dataset => `
+                                    <span class="pill bg-green-900/30 text-green-300">${dataset}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Helper function to get difficulty class
+         */
+        function getDifficultyClass(difficulty) {
+            const difficultyLower = difficulty.toLowerCase();
+            if (difficultyLower.includes('beginner')) return 'bg-green-900/30 text-green-300';
+            if (difficultyLower.includes('intermediate')) return 'bg-yellow-900/30 text-yellow-300';
+            if (difficultyLower.includes('advanced') || difficultyLower.includes('expert')) return 'bg-red-900/30 text-red-300';
+            return 'bg-dark-800/50 text-dark-300';
+        }
+        // ===========================================================
+        // END OF ADDED CODE
+        // ===========================================================
+
+        /**
+         * 4. Resume Rewriting
+         */
+        function validateRewriteCandidateId() {
+            const candidateId = document.getElementById('rewrite-candidate-id')?.value;
+            const rewriteBtn = document.getElementById('rewrite-btn');
+            
+            rewriteBtn.disabled = !candidateId;
+        }
+
+        async function optimizeResume() {
+            const candidateId = document.getElementById('rewrite-candidate-id')?.value;
+            const jdText = document.getElementById('rewrite-jd-text')?.value?.trim();
+            const focusAreasText = document.getElementById('focus-areas')?.value;
+
+            if (!candidateId) {
+                showToast("Please enter a candidate ID.", "warning");
+                return;
+            }
+
+            toggleLoading('rewrite-btn', 'rewrite-spinner', true, 'Optimize My Resume');
+
+            // Parse focus areas if provided
+            let focusAreas = [];
+            if (focusAreasText) {
+                focusAreas = focusAreasText.split(/[\n,]/).map(area => area.trim()).filter(area => area.length > 0);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/resume-rewrite`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidate_id: currentCandidateId || null,
+                        candidate_data: currentCandidateId ? null : (currentParsedResumeData ? currentParsedResumeData.parsed_data : null),
+                        jd_text: jdText || null,
+                        focus_areas: focusAreas.length > 0 ? focusAreas : null
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderResumeRewriteResults(data);
+                    document.getElementById('rewrite-results').classList.remove('hidden');
+                    showToast(`Resume optimized! ATS score improvement: ${data.ats_score_improvement}%`, 'success');
+                } else {
+                    showToast(`Failed to optimize resume: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error. Is the backend running?', 'error');
+            } finally {
+                toggleLoading('rewrite-btn', 'rewrite-spinner', false, 'Optimize My Resume');
+            }
+        }
+
+        function renderResumeRewriteResults(data) {
+            // Update ATS improvement
+            document.getElementById('ats-improvement').textContent = `${data.ats_score_improvement}%`;
+            document.getElementById('improvement-text').textContent = `Improved by ${data.ats_score_improvement}%`;
+            
+            // Render added skills
+            const addedSkills = document.getElementById('added-skills');
+            if (addedSkills && data.skill_keywords_added && data.skill_keywords_added.length > 0) {
+                addedSkills.innerHTML = data.skill_keywords_added.map(skill => `
+                    <span class="pill bg-green-900/30 text-green-300">${skill}</span>
+                `).join('');
+            } else {
+                addedSkills.innerHTML = '<p class="text-dark-400 italic">No new skills added</p>';
+            }
+            
+            // Render STAR examples
+            const starExamples = document.getElementById('star-examples');
+            if (starExamples && data.star_format_examples && data.star_format_examples.length > 0) {
+                starExamples.innerHTML = data.star_format_examples.map((example, index) => `
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-white mb-2">Example ${index + 1}</h5>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-dark-400">Situation</p>
+                                <p class="text-dark-200">${example.situation || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-dark-400">Task</p>
+                                <p class="text-dark-200">${example.task || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-dark-400">Action</p>
+                                <p class="text-dark-200">${example.action || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-dark-400">Result</p>
+                                <p class="text-dark-200">${example.result || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                starExamples.innerHTML = '<p class="text-dark-400 italic">No STAR examples generated</p>';
+            }
+            
+            // Render resume comparison
+            const originalExcerpt = document.getElementById('original-excerpt');
+            const optimizedExcerpt = document.getElementById('optimized-excerpt');
+            
+            if (originalExcerpt) {
+                originalExcerpt.textContent = data.optimized_resume_text.substring(0, 500) + '...';
+            }
+            
+            if (optimizedExcerpt) {
+                optimizedExcerpt.textContent = data.optimized_resume_text.substring(0, 500) + '...';
+            }
+            
+            // Render rewritten bullet points
+            const rewrittenBullets = document.getElementById('rewritten-bullets');
+            if (rewrittenBullets && data.bullet_points_rewritten && data.bullet_points_rewritten.length > 0) {
+                rewrittenBullets.innerHTML = data.bullet_points_rewritten.map((bullet, index) => `
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="original-text p-3 rounded">
+                                <p class="text-sm text-dark-400 mb-1">Original</p>
+                                <p class="text-dark-300">${bullet.original || 'N/A'}</p>
+                            </div>
+                            <div class="optimized-text p-3 rounded">
+                                <p class="text-sm text-dark-400 mb-1">Optimized</p>
+                                <p class="text-dark-300">${bullet.optimized || 'N/A'}</p>
+                            </div>
+                        </div>
+                        ${bullet.star_example ? `
+                        <div class="mt-3 p-3 bg-primary-900/20 rounded">
+                            <p class="text-sm text-primary-400 mb-1">STAR Example</p>
+                            <p class="text-primary-300">${bullet.star_example}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function copyOptimizedResume() {
+            if (!currentEvaluationData || !currentEvaluationData.optimized_resume_text) {
+                showToast("No optimized resume available to copy.", "warning");
+                return;
+            }
+            
+            navigator.clipboard.writeText(currentEvaluationData.optimized_resume_text)
+                .then(() => showToast("Optimized resume copied to clipboard!", "success"))
+                .catch(() => showToast("Failed to copy to clipboard", "error"));
+        }
+
+        function downloadOptimizedResume() {
+            if (!currentEvaluationData || !currentEvaluationData.optimized_resume_text) {
+                showToast("No optimized resume available to download.", "warning");
+                return;
+            }
+            
+            const blob = new Blob([currentEvaluationData.optimized_resume_text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'optimized-resume.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast("Optimized resume downloaded!", "success");
+        }
+
+        /**
+         * 5. Recruiter Mode: JD Rewriting
+         */
+        async function rewriteJD() {
+            const jdText = document.getElementById('recruiter-jd-text')?.value?.trim();
+            
+            if (!jdText || jdText.length < 20) {
+                showToast("Please enter a job description to normalize.", "warning");
+                return;
+            }
+
+            toggleLoading('rewrite-jd-btn', 'rewrite-jd-spinner', true, 'Normalize JD');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/jd/rewrite`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jd_text: jdText
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentNormalizedJDData = data;
+                    renderNormalizedJD(data);
+                    document.getElementById('jd-rewrite-results').classList.remove('hidden');
+                    showToast("JD normalized successfully!", "success");
+                } else {
+                    showToast(`Failed to normalize JD: ${data.detail || 'Unknown error'}`, "error");
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error. Is the backend running?', 'error');
+            } finally {
+                toggleLoading('rewrite-jd-btn', 'rewrite-jd-spinner', false, 'Normalize JD');
+            }
+        }
+
+        function renderNormalizedJD(data) {
+            const content = document.getElementById('normalized-jd-content');
+            if (!content) return;
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-primary-300 mb-2">Role</h5>
+                        <p class="text-white">${data.role || 'N/A'}</p>
+                    </div>
+                    
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-primary-300 mb-2">Seniority Level</h5>
+                        <p class="text-white">${data.seniority_level || 'N/A'}</p>
+                    </div>
+                    
+                    ${data.required_skills && data.required_skills.length > 0 ? `
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-primary-300 mb-2">Required Skills</h5>
+                        <div class="flex flex-wrap gap-2">
+                            ${data.required_skills.map(skill => `<span class="pill">${skill}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${data.responsibilities && data.responsibilities.length > 0 ? `
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-primary-300 mb-2">Responsibilities</h5>
+                        <div class="space-y-2">
+                            ${data.responsibilities.map(resp => `
+                                <div class="flex items-start">
+                                    <i class="fas fa-check text-green-400 mt-1 mr-2 flex-shrink-0"></i>
+                                    <p class="text-dark-200">${resp}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${data.tools && data.tools.length > 0 ? `
+                    <div class="bg-dark-800/50 p-4 rounded-xl">
+                        <h5 class="text-md font-semibold text-primary-300 mb-2">Tools & Technologies</h5>
+                        <div class="flex flex-wrap gap-2">
+                            ${data.tools.map(tool => `<span class="pill bg-blue-900/30">${tool}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function copyNormalizedJDToClipboard() {
+            if (!currentNormalizedJDData) {
+                showToast("No normalized JD data to copy.", "warning");
+                return;
+            }
+            
+            const data = currentNormalizedJDData;
+            let formatted = `### Normalized Job Description: ${data.role || 'N/A'}\n\n`;
+            formatted += `**Seniority Level:** ${data.seniority_level || 'N/A'}\n\n`;
+            
+            if (data.required_skills && data.required_skills.length > 0) {
+                formatted += `**Required Skills:**\n`;
+                data.required_skills.forEach(skill => {
+                    formatted += `- ${skill}\n`;
+                });
+                formatted += `\n`;
+            }
+            
+            if (data.responsibilities && data.responsibilities.length > 0) {
+                formatted += `**Responsibilities:**\n`;
+                data.responsibilities.forEach(resp => {
+                    formatted += `- ${resp}\n`;
+                });
+                formatted += `\n`;
+            }
+            
+            if (data.tools && data.tools.length > 0) {
+                formatted += `**Tools & Technologies:**\n`;
+                data.tools.forEach(tool => {
+                    formatted += `- ${tool}\n`;
+                });
+                formatted += `\n`;
+                     navigator.clipboard.writeText(formatted).then(() => {
+                showToast("Normalized Job Description copied to clipboard!", "success");
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+                showToast("Failed to copy to clipboard.", "error");
+            });
+        }
+
+        async function saveActiveCandidateToDatabase() {
+            if (!currentParsedResumeData || !currentParsedResumeData.parsed_data) {
+                showToast("No active candidate session to persist.", "warning");
+                return;
+            }
+            
+            toggleLoading('save-candidate-db-btn', null, true, 'Saving...');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/persist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentParsedResumeData.parsed_data)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCandidateId = data.candidate_id;
+                    if (currentParsedResumeData) {
+                        currentParsedResumeData.candidate_id = data.candidate_id;
+                    }
+                    syncCandidateIdUI();
+                    showToast(`Candidate successfully saved to database! ID: ${data.candidate_id}`, 'success');
+                    
+                    const btn = document.getElementById('save-candidate-db-btn');
+                    if (btn) btn.classList.add('hidden');
+                } else {
+                    showToast(`Failed to save candidate: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (err) {
+                console.error("Save candidate error:", err);
+                showToast("Network error trying to save candidate.", "error");
+            } finally {
+                toggleLoading('save-candidate-db-btn', null, false, '<i class="fas fa-save mr-1"></i> Save to Database');
+            }
+        }
+
+        function syncCandidateIdUI() {
+            const inputs = {
+                'candidate-id': { inputGroup: 'self-eval-id-input-container', badgeGroup: 'self-eval-id-badge-container' },
+                'projects-candidate-id': { inputGroup: 'projects-id-input-container', badgeGroup: 'projects-id-badge-container' },
+                'rewrite-candidate-id': { inputGroup: 'rewrite-id-input-container', badgeGroup: 'rewrite-id-badge-container' }
+            };
+ 
+            if (currentParsedResumeData) {
+                if (currentCandidateId) {
+                    localStorage.setItem('current_candidate_id', currentCandidateId);
+                } else {
+                    localStorage.removeItem('current_candidate_id');
+                }
+                localStorage.setItem('active_candidate_profile', JSON.stringify(currentParsedResumeData));
+                
+                const parsed = currentParsedResumeData.parsed_data || {};
+                const name = parsed.name || 'Candidate';
+                const labelText = currentCandidateId ? `${name} (ID: ${currentCandidateId})` : `${name} (In-Memory Session)`;
+ 
+                for (const [id, containers] of Object.entries(inputs)) {
+                    const inputEl = document.getElementById(id);
+                    if (inputEl) {
+                        inputEl.value = currentCandidateId || 0;
+                    }
+                    
+                    const inputGroupEl = document.getElementById(containers.inputGroup);
+                    const badgeGroupEl = document.getElementById(containers.badgeGroup);
+                    
+                    if (inputGroupEl && badgeGroupEl) {
+                        inputGroupEl.classList.add('hidden');
+                        badgeGroupEl.innerHTML = `
+                            <div class="bg-primary-950/20 border border-primary-500/20 p-4 rounded-xl flex justify-between items-center backdrop-blur-sm">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mr-3 text-primary-400">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-dark-400 font-medium">ACTIVE PROFILE</div>
+                                        <div class="text-sm font-semibold text-white">${labelText}</div>
+                                    </div>
+                                </div>
+                                <button onclick="clearActiveCandidate()" class="text-xs text-primary-400 hover:text-primary-300 underline font-medium focus:outline-none">
+                                    Change Profile
+                                </button>
+                            </div>
+                        `;
+                        badgeGroupEl.classList.remove('hidden');
+                    }
+                }
+                
+                validateCandidateId();
+                validateProjectsCandidateId();
+                validateRewriteCandidateId();
+            } else {
+                localStorage.removeItem('current_candidate_id');
+                
+                for (const [id, containers] of Object.entries(inputs)) {
+                    const inputEl = document.getElementById(id);
+                    if (inputEl) {
+                        inputEl.value = '';
+                    }
+                    
+                    const inputGroupEl = document.getElementById(containers.inputGroup);
+                    const badgeGroupEl = document.getElementById(containers.badgeGroup);
+                    
+                    if (inputGroupEl && badgeGroupEl) {
+                        inputGroupEl.classList.remove('hidden');
+                        badgeGroupEl.classList.add('hidden');
+                        badgeGroupEl.innerHTML = '';
+                    }
+                }
+                
+                const infoBox = document.getElementById('candidate-info');
+                if (infoBox) {
+                    infoBox.classList.add('hidden');
+                    infoBox.innerHTML = '';
+                }
+            }
+        }
+
+        function clearActiveCandidate() {
+            currentCandidateId = null;
+            currentParsedResumeData = null;
+            syncCandidateIdUI();
+            showToast("Candidate profile cleared.", "info");
+        }
+
+        async function initActiveCandidate() {
+            if (!currentCandidateId) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/candidate/${currentCandidateId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    currentParsedResumeData = data;
+                    syncCandidateIdUI();
+                } else {
+                    currentCandidateId = null;
+                    localStorage.removeItem('current_candidate_id');
+                    syncCandidateIdUI();
+                }
+            } catch (err) {
+                console.error("Failed to fetch active candidate:", err);
+                syncCandidateIdUI();
+            }
+        }
+
+        /**
+         * 6. Recruiter Mode: Evaluate JD
+         */
+        async function evaluateJD() {
+            const jdText = document.getElementById('recruiter-match-jd')?.value?.trim();
+            const domain = document.getElementById('recruiter-domain')?.value;
+            const topK = document.getElementById('recruiter-top-k')?.value;
+            
+            if (!jdText || jdText.length < 50) {
+                showToast("Please enter a comprehensive job description (min 50 chars).", "warning");
+                return;
+            }
+
+            toggleLoading('evaluate-jd-btn', 'evaluate-jd-spinner', true, 'Find Candidates');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/evaluate-jd`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jd_text: jdText,
+                        domain: domain || null,
+                        top_k: parseInt(topK, 10)
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderMatchingCandidates(data.results || []);
+                    document.getElementById('jd-evaluate-results').classList.remove('hidden');
+                    showToast(`Found ${data.results.length} matching candidates!`, "success");
+                } else {
+                    showToast(`Failed to evaluate JD: ${data.detail || 'Unknown error'}`, "error");
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Network error. Is the backend running?', 'error');
+            } finally {
+                toggleLoading('evaluate-jd-btn', 'evaluate-jd-spinner', false, 'Find Candidates');
+            }
+        }
+
+        function renderMatchingCandidates(candidates) {
+            const container = document.getElementById('matching-candidates');
+            if (!container) return;
+
+            if (candidates.length === 0) {
+                container.innerHTML = '<p class="text-dark-400 italic">No matching candidates found.</p>';
+                return;
+            }
+
+            container.innerHTML = candidates.map((candidate, index) => {
+                const scoreClass = getScoreClass(candidate.score_100);
+                return `
+                    <div class="card p-4 candidate-card">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-white">${candidate.candidate_name || 'Candidate'}</h4>
+                                <div class="flex items-center mt-2 space-x-4">
+                                    <span class="text-sm text-dark-400">
+                                        <i class="fas fa-briefcase mr-1"></i> ${candidate.primary_role || 'N/A'}
+                                    </span>
+                                    <span class="text-sm text-dark-400">
+                                        <i class="fas fa-chart-line mr-1"></i> ${candidate.total_experience || 'N/A'} years
+                                    </span>
+                                    <span class="text-sm text-dark-400">
+                                        <i class="fas fa-layer-group mr-1"></i> ${candidate.primary_domain || 'N/A'}
+                                    </span>
+                                </div>
+                                <div class="mt-3">
+                                    ${candidate.strengths.slice(0, 2).map(strength => `
+                                        <span class="pill bg-green-900/30 text-green-300">${strength.substring(0, 30)}...</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="text-right ml-4">
+                                <span class="score-badge ${scoreClass} text-lg font-bold px-4 py-2">${candidate.score_100}%</span>
+                                <p class="text-xs text-dark-400 mt-2">Match Score</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getScoreClass(score) {
+            if (score >= 90) return 'score-90';
+            if (score >= 80) return 'score-80';
+            if (score >= 70) return 'score-70';
+            if (score >= 60) return 'score-60';
+            return 'score-50';
+        }
+
+        /**
+         * 7. Interview Evaluation Functions
+         */
+        function startInterviewSession() {
+            if (!currentEvaluationData || !currentEvaluationData.interview_questions || currentEvaluationData.interview_questions.length === 0) {
+                showToast("No interview questions available for your score range.", "warning");
+                return;
+            }
+
+            interviewQuestions = currentEvaluationData.interview_questions || [];
+            interviewRole = currentEvaluationData.role || '';
+            interviewDomain = currentEvaluationData.domain || '';
+            interviewSessionId = 'interview-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            currentQuestionIndex = 0;
+
+            document.getElementById('interview-section').classList.remove('hidden');
+            loadCurrentQuestion();
+            document.getElementById('submit-answer-btn').disabled = false;
+
+            showToast("Interview session started! Answer the question and click 'Submit Answer'.", "success");
+        }
+
+        function resetInterviewSession() {
+            interviewSessionId = null;
+            interviewQuestions = [];
+            currentQuestionIndex = 0;
+            
+            document.getElementById('interview-section').classList.add('hidden');
+            document.getElementById('evaluation-result-container').classList.add('hidden');
+            document.getElementById('interview-answer').value = '';
+            document.getElementById('answer-char-count').textContent = '0 characters';
+            document.getElementById('submit-answer-btn').disabled = true;
+            
+            showToast("Interview session reset.", "info");
+        }
+
+        function loadCurrentQuestion() {
+            if (currentQuestionIndex >= interviewQuestions.length) {
+                document.getElementById('current-question-text').textContent = "Interview completed! All questions answered.";
+                document.getElementById('submit-answer-btn').disabled = true;
+                return;
+            }
+
+            const question = interviewQuestions[currentQuestionIndex];
+            document.getElementById('current-question-text').textContent = question;
+            document.getElementById('interview-answer').value = '';
+            document.getElementById('answer-char-count').textContent = '0 characters';
+            document.getElementById('questions-remaining').textContent = `${currentQuestionIndex + 1} of ${interviewQuestions.length}`;
+        }
+
+        function loadNextQuestion() {
+            document.getElementById('evaluation-result-container').classList.add('hidden');
+            currentQuestionIndex++;
+            loadCurrentQuestion();
+        }
+
+        async function submitInterviewAnswer() {
+            const questionText = document.getElementById('current-question-text').textContent;
+            const answerText = document.getElementById('interview-answer').value.trim();
+            
+            if (!answerText) {
+                showToast("Please enter an answer before submitting.", "warning");
+                return;
+            }
+
+            if (!interviewSessionId || !currentCandidateId) {
+                showToast("Interview session not properly initialized.", "error");
+                return;
+            }
+
+            toggleLoading('submit-answer-btn', 'submit-answer-spinner', true, 'Submit Answer');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/interview/evaluate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: interviewSessionId,
+                        candidate_id: parseInt(currentCandidateId),
+                        question: questionText,
+                        user_answer: answerText,
+                        role: interviewRole,
+                        domain: interviewDomain
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    handleInterviewResponse(data);
+                } else {
+                    throw new Error(data.detail || 'Evaluation failed');
+                }
+            } catch (error) {
+                console.error('Interview evaluation error:', error);
+                showToast(`Evaluation failed: ${error.message}`, 'error');
+                showFallbackEvaluationResult(questionText, answerText);
+            } finally {
+                toggleLoading('submit-answer-btn', 'submit-answer-spinner', false, 'Submit Answer');
+            }
+        }
+
+        function handleInterviewResponse(data) {
+            document.getElementById('answer-score').textContent = data.answer_score || 0;
+            document.getElementById('feedback-text').textContent = data.feedback || 'No feedback provided.';
+            
+            const strengthsList = document.getElementById('strengths-list');
+            if (data.strengths?.length > 0) {
+                strengthsList.innerHTML = data.strengths.map(s => 
+                    `<div class="strength-item"><p class="text-green-300">${s}</p></div>`
+                ).join('');
+            } else {
+                strengthsList.innerHTML = '<p class="text-dark-400 italic">Not provided</p>';
+            }
+            
+            const weaknessesList = document.getElementById('weaknesses-list');
+            if (data.weaknesses?.length > 0) {
+                weaknessesList.innerHTML = data.weaknesses.map(w => 
+                    `<div class="gap-item"><p class="text-yellow-300">${w}</p></div>`
+                ).join('');
+            } else {
+                weaknessesList.innerHTML = '<p class="text-dark-400 italic">Not provided</p>';
+            }
+            
+            const nextDifficultyText = document.getElementById('next-difficulty-text');
+            nextDifficultyText.textContent = data.next_difficulty || 'same';
+            nextDifficultyText.className = 'text-lg font-semibold text-white mb-1';
+            
+            if (data.next_difficulty === 'easier') {
+                nextDifficultyText.classList.add('difficulty-easier');
+            } else if (data.next_difficulty === 'harder') {
+                nextDifficultyText.classList.add('difficulty-harder');
+            } else {
+                nextDifficultyText.classList.add('difficulty-same');
+            }
+            
+            if (data.follow_up_question && data.follow_up_question.trim()) {
+                interviewQuestions.splice(currentQuestionIndex + 1, 0, data.follow_up_question);
+                document.getElementById('questions-remaining').textContent = 
+                    `${currentQuestionIndex + 1} of ${interviewQuestions.length}`;
+            }
+            
+            document.getElementById('evaluation-result-container').classList.remove('hidden');
+            
+            if (data.status === 'success') {
+                showToast(`Answer evaluated! Score: ${data.answer_score}%`, 'success');
+            } else {
+                showToast(`Evaluation completed with warnings`, 'warning');
+            }
+        }
+
+        function showFallbackEvaluationResult(question, answer) {
+            const score = Math.min(100, Math.floor(answer.length / 5));
+            
+            document.getElementById('answer-score').textContent = score;
+            document.getElementById('feedback-text').textContent = 
+                "System evaluation temporarily unavailable. Basic assessment based on answer length.";
+            
+            document.getElementById('strengths-list').innerHTML = 
+                `<div class="strength-item"><p class="text-green-300">Provided detailed answer (${answer.length} characters)</p></div>`;
+            
+            document.getElementById('weaknesses-list').innerHTML = 
+                `<div class="gap-item"><p class="text-yellow-300">AI evaluation service unavailable</p></div>`;
+            
+            document.getElementById('next-difficulty-text').textContent = 'same';
+            document.getElementById('next-difficulty-text').className = 'text-lg font-semibold text-white mb-1 difficulty-same';
+            
+            document.getElementById('evaluation-result-container').classList.remove('hidden');
+            showToast("Using fallback evaluation", "warning");
+        }
+
+        /**
+         * 8. Modal Functions for Self Evaluation
+         */
+        function showEvaluationDetails() {
+            if (!currentEvaluationData) return showToast("Run evaluation first.", "warning");
+            
+            const modalContent = document.getElementById('modal-details-content');
+            if (!modalContent) return;
+            
+            const detailsHtml = `
+                <div class="space-y-4">
+                    <div class="bg-dark-800 p-4 rounded-lg">
+                        <h4 class="text-lg font-bold text-primary-300 mb-2">Overall Score: ${currentEvaluationData.score_100 || 0}%</h4>
+                        ${currentEvaluationData.status ? 
+                            `<p class="text-${currentEvaluationData.status === 'success' ? 'green' : currentEvaluationData.status === 'partial' ? 'yellow' : 'red'}-300">
+                                Status: ${currentEvaluationData.status.charAt(0).toUpperCase() + currentEvaluationData.status.slice(1)}
+                            </p>` : ''}
+                    </div>
+                    
+                    ${currentEvaluationData.decision_reasoning ? `
+                    <div class="bg-dark-800 p-4 rounded-lg border-l-4 border-primary-500">
+                        <h5 class="text-lg font-semibold text-primary-300 mb-2">AI Agent Decision Logic</h5>
+                        <p class="text-dark-200">${currentEvaluationData.decision_reasoning}</p>
+                    </div>
+                    ` : ''}
+                    
+                    ${currentEvaluationData.confidence_feedback ? `
+                    <div class="bg-dark-800 p-4 rounded-lg">
+                        <h5 class="text-lg font-semibold text-white mb-2">Confidence Feedback</h5>
+                        <p class="text-primary-300">${currentEvaluationData.confidence_feedback}</p>
+                    </div>
+                    ` : ''}
+                    
+                    ${currentEvaluationData.strengths && currentEvaluationData.strengths.length > 0 ? `
+                    <div>
+                        <h5 class="text-lg font-semibold text-white mb-2">All Strengths:</h5>
+                        <div class="space-y-2">
+                            ${currentEvaluationData.strengths.map(s => `
+                                <div class="strength-item">
+                                    <p class="text-green-300">${s}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${currentEvaluationData.gaps && currentEvaluationData.gaps.length > 0 ? `
+                    <div>
+                        <h5 class="text-lg font-semibold text-white mb-2">All Gaps:</h5>
+                        <div class="space-y-2">
+                            ${currentEvaluationData.gaps.map(g => `
+                                <div class="gap-item">
+                                    <p class="text-yellow-300">${g}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modalContent.innerHTML = detailsHtml;
+            document.getElementById('details-modal').classList.add('active');
+        }
+
+        function showStrengthsModal() {
+            if (!currentEvaluationData || !currentEvaluationData.strengths || currentEvaluationData.strengths.length === 0) {
+                showToast("No strengths data available.", "warning");
+                return;
+            }
+            showEvaluationDetails();
+        }
+
+        function showGapsModal() {
+            if (!currentEvaluationData || !currentEvaluationData.gaps || currentEvaluationData.gaps.length === 0) {
+                showToast("No gaps data available.", "warning");
+                return;
+            }
+            showEvaluationDetails();
+        }
+
+        function showInterviewQuestions() {
+            if (!currentEvaluationData || !currentEvaluationData.interview_questions || currentEvaluationData.interview_questions.length === 0) {
+                showToast("No interview questions generated by the agent (score-based decision).", "warning");
+                return;
+            }
+
+            const modal = document.getElementById('questions-modal');
+            const modalContent = document.getElementById('modal-questions-content');
+            
+            if (!modal || !modalContent) return;
+            
+            modal.classList.add('active');
+            
+            modalContent.innerHTML = currentEvaluationData.interview_questions.map((question, index) => `
+                <div class="question-item">
+                    <p class="font-semibold text-primary-300">Question ${index + 1}:</p>
+                    <p class="text-dark-200 mt-1">${question}</p>
+                </div>
+            `).join('');
+        }
+
+        function showLearningRoadmap() {
+            if (!currentEvaluationData || !currentEvaluationData.learning_roadmap || currentEvaluationData.learning_roadmap.length === 0) {
+                showToast("No learning roadmap generated by the agent.", "warning");
+                return;
+            }
+
+            const modal = document.getElementById('roadmap-modal');
+            const modalContent = document.getElementById('modal-roadmap-content');
+            
+            if (!modal || !modalContent) return;
+            
+            modal.classList.add('active');
+            
+            modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-dark-800 p-4 rounded-lg">
+                        <h4 class="text-lg font-bold text-primary-300 mb-2">Personalized Learning Roadmap</h4>
+                        <p class="text-dark-300">Based on your score of ${currentEvaluationData.score_100 || 0}%, the AI agent has created this customized learning plan:</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${currentEvaluationData.learning_roadmap.map((step, index) => `
+                            <div class="bg-dark-800 p-4 rounded-lg border-l-4 ${index % 2 === 0 ? 'border-green-500' : 'border-blue-500'}">
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 ${index % 2 === 0 ? 'bg-green-900/30 border-green-800/50' : 'bg-blue-900/30 border-blue-800/50'} rounded-full flex items-center justify-center mr-3 border">
+                                        <span class="${index % 2 === 0 ? 'text-green-300' : 'text-blue-300'} font-bold">${index + 1}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-white">${step}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    ${currentEvaluationData.confidence_feedback ? `
+                    <div class="bg-dark-800 p-4 rounded-lg">
+                        <h5 class="text-lg font-semibold text-yellow-300 mb-2">Agent Feedback</h5>
+                        <p class="text-dark-200">${currentEvaluationData.confidence_feedback}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize character counters
+            const textareas = ['self-jd-text', 'rewrite-jd-text', 'interview-answer'];
+            textareas.forEach(id => {
+                const textarea = document.getElementById(id);
+                if (textarea) {
+                    textarea.addEventListener('input', function() {
+                        const countId = id === 'self-jd-text' ? 'self-jd-char-count' : 
+                                      id === 'rewrite-jd-text' ? 'rewrite-jd-char-count' : 'answer-char-count';
+                        updateCharCount(id, countId);
+                        if (id === 'self-jd-text') validateCandidateId();
+                    });
+                }
+            });
+
+            // Initialize candidate ID validation
+            const candidateIds = ['candidate-id', 'projects-candidate-id', 'rewrite-candidate-id'];
+            candidateIds.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', function() {
+                        if (id === 'candidate-id') validateCandidateId();
+                        if (id === 'projects-candidate-id') validateProjectsCandidateId();
+                        if (id === 'rewrite-candidate-id') validateRewriteCandidateId();
+                    });
+                }
+            });
+
+            // Check if we have a candidate ID from previous upload
+            if (currentCandidateId) {
+                initActiveCandidate();
+            } else {
+                syncCandidateIdUI();
+            }
+        });
+
+    </script>
+</body>
+</html>

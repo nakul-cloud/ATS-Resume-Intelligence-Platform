@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ResumeIntel - Upload Resume</title>
+    <!-- Google Fonts Poppins and Inter -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "card-padding": "40px",
+                        "margin-mobile": "20px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "section-gap": "64px",
+                        "container-max": "1100px"
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #0c0a20, #1e1b4b, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
+            color: #e2e8f0;
+            scroll-behavior: smooth;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+        }
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.1);
+            transform: translateY(-5px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        .btn-secondary:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        .file-upload-area {
+            border: 2px dashed rgba(148, 163, 184, 0.3);
+            transition: all 0.3s ease;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+        }
+        .file-upload-area:hover, .file-upload-area.dragover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        /* Style adjustments for Javascript interactions classes */
+        .border-primary {
+            border-color: #3b82f6 !important;
+        }
+        .bg-primary\/5 {
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+        .success-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(30, 41, 59, 0.8));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="font-body-md text-dark-200">
+    <!-- Top Navigation Bar -->
+    <header class="glass-card shadow-lg fixed top-0 left-0 w-full z-50 h-20 flex items-center" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 0 0 20px 20px;
+    ">
+        <div class="flex justify-between items-center w-full px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+            <div class="text-xl font-bold font-poppins flex items-center">
+                <i class="fas fa-brain mr-2 text-primary-400"></i>
+                <span class="gradient-text font-poppins">ResumeIntel</span>
+            </div>
+            <nav class="hidden md:flex items-center gap-2">
+                <a class="text-white bg-primary-600/30 border border-primary-500/30 rounded-lg px-4 py-2 font-medium transition-all duration-300 ease-in-out active:scale-95" href="#">Upload Resume</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../self_evaluation/code.html">Self Evaluation</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../project_recommendations/code.html">Projects</a>
+                <a class="text-dark-300 hover:text-white px-4 py-2 font-medium hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95" href="../rewrite_resume/code.html">Rewrite Resume</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center bg-dark-800/60 border border-dark-700/50 rounded-full px-3 py-1">
+                    <span class="text-xs font-semibold text-primary-400">Candidate</span>
+                    <span class="mx-2 text-dark-500">|</span>
+                    <a class="text-xs font-semibold text-dark-400 hover:text-white" href="../recruiter_tools/code.html">Recruiter</a>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-primary-900/30 border border-primary-800/50 flex items-center justify-center text-on-primary overflow-hidden transition-all duration-300 active:scale-95 cursor-pointer">
+                    <img class="w-full h-full object-cover" data-alt="A professional candidate studio portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFop0-__SaQm91gHpArCiP-keTnYs9wtV6AAWM6YL_6f7IlkAiHMOrUpR_Xmc3FmLF9W9W2EvK89GWGSUQB2sdcIyOa2DqCEu1qC8-Di6oVA6BBe8sZ7SQIOXLfGq5PT2ki84067NyLhRTPFWBfWNKBBh5cUa8TBA7dtylOewIjs1jORXPttXCoFshmEM6ST4CjwkucBaOuHQGfjetR2slysCVpBye3fYfL6-Q_6vtCazCQqPFJFma"/>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 max-w-container-max mx-auto px-margin-mobile md:px-gutter">
+        <!-- Hero Section -->
+        <div class="mb-section-gap text-center space-y-4">
+            <h1 class="text-4xl md:text-5xl font-bold font-poppins text-white leading-tight">Let's start with your resume</h1>
+            <p class="text-lg text-dark-300 max-w-2xl mx-auto">Upload your professional story and let our intelligence engine transform it into a precision-engineered career asset.</p>
+        </div>
+
+        <!-- Upload Interaction Zone -->
+        <div class="space-y-section-gap" id="upload-stage">
+            <div class="relative">
+                <div class="card p-card-padding flex flex-col items-center justify-center file-upload-area cursor-pointer group min-h-[400px]" id="drop-zone">
+                    <div class="bg-primary-900/30 border border-primary-850/50 p-8 rounded-full mb-6 group-hover:scale-110 transition-transform duration-500 floating">
+                        <span class="material-symbols-outlined text-primary-400 text-[64px]">upload_file</span>
+                    </div>
+                    <h3 class="text-2xl font-semibold font-poppins text-white mb-2">Drag and drop your file here</h3>
+                    <p class="text-sm text-dark-400 mb-8">PDF, DOCX, or RTF (Max 5MB)</p>
+                    <button class="btn-secondary px-8 py-3 rounded-xl text-sm font-semibold active:scale-95" id="select-file-btn">Browse Files</button>
+                    <input accept=".pdf,.docx,.rtf" class="hidden" id="file-input" type="file"/>
+                </div>
+            </div>
+            <!-- Action Area -->
+            <div class="flex flex-col items-center space-y-6">
+                <button class="btn-primary px-12 py-4 rounded-xl text-lg font-bold opacity-50 cursor-not-allowed transition-all duration-300" disabled="" id="upload-parse-btn">
+                    Upload &amp; Parse
+                </button>
+                <div class="hidden flex items-center gap-3 bg-primary-900/20 border border-primary-800/40 px-4 py-2 rounded-full" id="file-preview">
+                    <span class="material-symbols-outlined text-primary-400">description</span>
+                    <span class="text-sm font-semibold text-primary-300" id="file-name">my_resume_2024.pdf</span>
+                    <button class="material-symbols-outlined text-red-400 text-[18px] hover:text-red-300" id="remove-file">close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success State (Hidden by default) -->
+        <div class="hidden space-y-section-gap" id="success-stage">
+            <!-- Success Card -->
+            <div class="card overflow-hidden">
+                <div class="success-card p-6 flex flex-col md:flex-row items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-green-900/30 border border-green-800/50 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-green-400 fill-icon">check_circle</span>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-green-300">Resume uploaded!</h4>
+                        <p class="text-sm text-green-400">Our intelligence engine has completed the parsing process.</p>
+                    </div>
+                    <div class="md:ml-auto">
+                        <span class="inline-block bg-primary-900/30 border border-primary-700/50 text-primary-300 text-xs font-semibold px-4 py-2 rounded-full">High Match Potential</span>
+                    </div>
+                </div>
+                <div class="p-card-padding grid grid-cols-1 md:grid-cols-2 gap-section-gap">
+                    <!-- Candidate Summary -->
+                    <div class="space-y-6">
+                        <h5 class="text-xs font-semibold text-dark-400 uppercase tracking-widest">Candidate Profile</h5>
+                        <div class="grid grid-cols-2 gap-y-6">
+                            <div>
+                                <p class="text-xs text-dark-400">Candidate ID</p>
+                                <p class="text-lg font-bold text-white">#C-88219</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-dark-400">Full Name</p>
+                                <p class="text-lg font-bold text-white">Elena Rodriguez</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-dark-400">Primary Role</p>
+                                <p class="text-lg font-bold text-white">Senior UX Architect</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-dark-400">Experience</p>
+                                <p class="text-lg font-bold text-white">8.5 Years</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Skill Extraction -->
+                    <div class="space-y-6">
+                        <h5 class="text-xs font-semibold text-dark-400 uppercase tracking-widest">Extracted Skills</h5>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">Human-Centered Design</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">Design Systems</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">TypeScript</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">User Research</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">Accessibility (WCAG)</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">Strategic Prototyping</span>
+                            <span class="bg-primary-900/20 border border-primary-800/30 text-primary-300 px-3 py-1.5 rounded-lg text-xs font-medium">Information Architecture</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Next Steps -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+                <a href="../self_evaluation/code.html" class="card p-6 flex flex-col items-center text-center gap-4 group cursor-pointer">
+                    <span class="material-symbols-outlined text-primary-400 bg-primary-900/20 border border-primary-800/50 p-4 rounded-full group-hover:bg-primary-600 group-hover:text-white transition-colors">analytics</span>
+                    <h6 class="text-lg font-bold text-white">Self Evaluation</h6>
+                    <p class="text-sm text-dark-400">Benchmark your skills against industry standards.</p>
+                </a>
+                <a href="../rewrite_resume/code.html" class="card p-6 flex flex-col items-center text-center gap-4 group cursor-pointer">
+                    <span class="material-symbols-outlined text-primary-400 bg-primary-900/20 border border-primary-800/50 p-4 rounded-full group-hover:bg-primary-600 group-hover:text-white transition-colors">edit_note</span>
+                    <h6 class="text-lg font-bold text-white">Rewrite Resume</h6>
+                    <p class="text-sm text-dark-400">Optimize your content for ATS compatibility.</p>
+                </a>
+                <a href="../project_recommendations/code.html" class="card p-6 flex flex-col items-center text-center gap-4 group cursor-pointer">
+                    <span class="material-symbols-outlined text-primary-400 bg-primary-900/20 border border-primary-800/50 p-4 rounded-full group-hover:bg-primary-600 group-hover:text-white transition-colors">rocket_launch</span>
+                    <h6 class="text-lg font-bold text-white">Job Match</h6>
+                    <p class="text-sm text-dark-400">See tailored roles based on your profile.</p>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile Only) -->
+    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center py-3 md:hidden shadow-lg rounded-t-xl" style="
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+    ">
+        <a class="flex flex-col items-center justify-center text-white bg-primary-600/30 border border-primary-500/30 rounded-xl px-4 py-1.5 active:scale-95 transition-transform" href="#">
+            <span class="material-symbols-outlined fill-icon text-primary-400">upload_file</span>
+            <span class="text-[11px] font-semibold mt-1">Upload</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../self_evaluation/code.html">
+            <span class="material-symbols-outlined">analytics</span>
+            <span class="text-[11px] mt-1">Evaluate</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../project_recommendations/code.html">
+            <span class="material-symbols-outlined">folder_special</span>
+            <span class="text-[11px] mt-1">Projects</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-dark-300 hover:text-white px-4 py-1.5 active:scale-95 transition-transform" href="../rewrite_resume/code.html">
+            <span class="material-symbols-outlined">edit_note</span>
+            <span class="text-[11px] mt-1">Rewrite</span>
+        </a>
+    </nav>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const selectBtn = document.getElementById('select-file-btn');
+        const uploadBtn = document.getElementById('upload-parse-btn');
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const removeFile = document.getElementById('remove-file');
+        
+        const uploadStage = document.getElementById('upload-stage');
+        const successStage = document.getElementById('success-stage');
+
+        // Trigger file selection
+        selectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Handle file change
+        fileInput.addEventListener('change', handleFiles);
+
+        // Drag and Drop Logic
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-primary', 'bg-primary/5');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-primary', 'bg-primary/5');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary', 'bg-primary/5');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                handleFiles();
+            }
+        });
+
+        function handleFiles() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileName.textContent = file.name;
+                filePreview.classList.remove('hidden');
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadBtn.classList.add('hover:scale-[1.02]', 'active:scale-95');
+            }
+        }
+
+        removeFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+            uploadBtn.disabled = true;
+            uploadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            uploadBtn.classList.remove('hover:scale-[1.02]', 'active:scale-95');
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            uploadBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Parsing...
+            `;
+            
+            // Artificial delay to simulate processing
+            setTimeout(() => {
+                uploadStage.classList.add('hidden');
+                successStage.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

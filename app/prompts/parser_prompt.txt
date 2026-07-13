@@ -1,0 +1,51 @@
+You are an expert ATS (Applicant Tracking System) parser. Analyze the resume text below and extract candidate information into a structured JSON format.
+{correction_instruction}
+Resume Text:
+---
+{resume_text}
+---
+
+Return ONLY a raw JSON object matching the following structure:
+{{
+    "candidate_name": "Full Name of Candidate",
+    "email": "Email Address",
+    "phone_number": "Phone Number",
+    "primary_role_title": "Clean professional title (e.g., Senior Full-stack Developer)",
+    "primary_domain": "Primary industry/tech domain (e.g., Fintech, Web Development, Healthtech, Cloud Security)",
+    "total_experience_years": 5.5,
+    "highest_education": "Highest degree completed (e.g., Bachelor of Science in Computer Science)",
+    "summary_text": "A brief summary of the candidate's professional background and goals",
+    "skills": [
+        {{"skill_name": "Skill 1"}},
+        {{"skill_name": "Skill 2"}}
+    ],
+    "work_experience": [
+        {{
+            "company": "Company Name",
+            "role": "Job Title",
+            "duration": "Start Date - End Date",
+            "bullets": ["Action bullet 1", "Action bullet 2"]
+        }}
+    ],
+    "projects": [
+        {{
+            "title": "Project Name",
+            "description": "Short description of what was built and achieved",
+            "technologies_used": ["Python", "AWS"]
+        }}
+    ],
+    "accomplishments": [
+        "Major milestone, award, key achievement, or certification 1"
+    ],
+    "hobbies": [
+        "Hobby or interest 1"
+    ]
+}}
+
+Guidelines:
+1. Ensure 'total_experience_years' is a float or integer representing total years of professional experience. If not clear, estimate based on job dates.
+2. If any field (like accomplishments, hobbies, projects, work_experience) is missing, return an empty list rather than null.
+3. The JSON must be valid and conform EXACTLY to the structure above. Do not include markdown wraps or explanations in your response.
+4. Ensure 'email' matches standard email patterns containing '@' and a domain extension like '.com', '.co.in', '.org', etc.
+5. In the 'projects' list, extract any highlightable technical keywords, framework names, database systems, or tools mentioned in the project description and include them in the project's 'technologies_used' list.
+6. Also dont try to make projects more description more shorter if it is already short --if it is long or paragraph then only make a short one but it should not loose the details or important content.

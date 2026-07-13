@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #005da7;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #2976c7;
+  --color-on-primary-container: #fdfcff;
+
+  --color-secondary: #4f5e7e;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #cadaff;
+  --color-on-secondary-container: #505f7f;
+
+  --color-tertiary: #5c5c59;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #757572;
+  --color-on-tertiary-container: #fefcf8;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #fff8f5;
+  --color-on-background: #1f1b18;
+  --color-surface: #fff8f5;
+  --color-on-surface: #1f1b18;
+  --color-surface-variant: #ebe0dc;
+  --color-on-surface-variant: #414751;
+
+  --color-outline: #717783;
+  --color-outline-variant: #c1c7d3;
+
+  --color-surface-container-highest: #ebe0dc;
+  --color-surface-container-high: #f1e6e1;
+  --color-surface-container: #f7ece7;
+  --color-surface-container-low: #fdf1ed;
+  --color-surface-container-lowest: #ffffff;
+
+  --font-body-md: "Work Sans", sans-serif;
+  --font-body-sm: "Work Sans", sans-serif;
+  --font-h2: "Manrope", sans-serif;
+  --font-label-caps: "Work Sans", sans-serif;
+  --font-body-lg: "Work Sans", sans-serif;
+  --font-h3: "Manrope", sans-serif;
+  --font-h1: "Manrope", sans-serif;
+  --font-h1-mobile: "Manrope", sans-serif;
+
+  --spacing-xl: 64px;
+  --spacing-gutter: 24px;
+  --spacing-base: 8px;
+  --spacing-md: 24px;
+  --spacing-lg: 40px;
+  --spacing-sm: 12px;
+  --spacing-container-max: 1280px;
+  --spacing-xs: 4px;
+}
+
+@layer base {
+  body {
+    background-color: #fff8f5;
+    color: #1f1b18;
+    font-family: 'Work Sans', sans-serif;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.neomorphic-raised {
+  background-color: #ffffff !important;
+  box-shadow: 0px 12px 32px rgba(27, 43, 72, 0.04) !important;
+  border: none !important;
+  border-radius: 1.5rem !important; /* 24px */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neomorphic-raised:hover {
+  box-shadow: 0px 20px 48px rgba(27, 43, 72, 0.08) !important;
+  transform: translateY(-2px);
+}
+
+.neomorphic-inset {
+  background-color: #ffffff !important;
+  border: 1px solid #c1c7d3 !important;
+  box-shadow: none !important;
+  border-radius: 1rem !important; /* 16px */
+}
+
+.shimmer-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0; 
+  left: -100%;
+  width: 50%; 
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+.active-pill {
+  background-color: #005da7 !important;
+  color: white !important;
+  box-shadow: 0px 12px 32px rgba(27, 43, 72, 0.04) !important;
+}
+
+.primary-solid-btn {
+  background: #005da7 !important;
+  color: #ffffff !important;
+  border-radius: 1rem !important; /* 16px */
+  box-shadow: none !important;
+  border: none !important;
+  transition: transform 0.2s ease-out;
+}
+
+.primary-solid-btn:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0px 12px 32px rgba(27, 43, 72, 0.04) !important;
+  background: #005da7 !important;
+}
+
+/* Remove hard borders in card layout elements */
+.bg-surface-container,
+.bg-surface-container-low,
+.bg-surface-container-lowest,
+.bg-surface-container-high,
+.bg-surface-container-highest {
+  border-color: transparent !important;
+}
+
+/* Navbar specific design matching Spacious */
+nav.bg-surface\/95 {
+  background-color: rgba(255, 248, 245, 0.95) !important;
+  border-bottom: none !important;
+  box-shadow: 0px 4px 12px rgba(27, 43, 72, 0.02) !important;
+}
+
+/* Footer specific design matching Spacious */
+footer.bg-surface-container-lowest {
+  border-top: 1px solid rgba(113, 119, 131, 0.1) !important;
+}
+
+/* Subtle bounce animation for floating action bar */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.animate-bounce-subtle {
+  animation: bounce-subtle 4s ease-in-out infinite;
+}
+
+

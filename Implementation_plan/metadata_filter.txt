@@ -1,0 +1,19 @@
+Flow 1: Automatic Extraction from the JD (AI-Driven)
+If the recruiter just uploads a raw Job Description (e.g., "We are looking for a Senior Data Scientist with at least 5 years of experience..."):
+
+Our JD Rewriting Agent (app/agents/jd_rewrite_agent.py) parses the raw JD text.
+The agent uses the LLM to extract these structured requirements:
+role: "Data Scientist"
+min_experience: 5
+domain: "Data Science"
+The system then automatically applies the metadata.total_experience_years >= 5 filter to Qdrant behind the scenes, ensuring the AI only ranks candidates who meet the baseline experience required by the JD.
+Flow 2: Explicit Dashboard Filters (User-Driven)
+On the recruiter's frontend dashboard, we can display sidebar filters:
+
+A slider for Minimum Experience (0 to 15+ years).
+A dropdown for Domain selection. If a recruiter changes the slider to 5 years and clicks search, the frontend sends min_experience=5 to the backend API, which appends it as a filter condition to your Qdrant query.
+Summary:
+Using Strategy B lets you do both:
+
+The vector search will rank candidates based on how well their skills match the JD description.
+The metadata filters (whether extracted by the LLM from the JD, or selected manually by the recruiter) will strictly filter the results.

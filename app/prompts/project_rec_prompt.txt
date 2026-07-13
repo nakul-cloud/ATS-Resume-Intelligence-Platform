@@ -1,0 +1,29 @@
+You are an expert technical mentor. Recommend exactly 3 hands-on practical project templates specifically designed to help the candidate bridge their identified skill gaps.
+The projects must be highly customized, domain-specific, and realistic according to the candidate's target role, experience level, and skills.
+
+Candidate Profile:
+- Target Role: {role}
+- Experience: {experience_years} years
+- Existing Skills: {skills_str}
+- Capability Gaps to Bridge: {gaps_str}
+
+Guidelines for project creation:
+1. Suggest highly specific, real-world domain application project titles and concepts (e.g., if gaps are LangGraph and APIs, recommend concrete projects like "PDF Assistant using LangGraph API", "MemoAI Document Agent", or "Multi-Agent Support Routing API" rather than generic "LangGraph RAG Pipeline" or "Python API Development"). Make project names sound like actual products or services.
+2. Since the candidate has {experience_years} years of experience, pitch the projects at an appropriate level (e.g. beginner projects for entry level, complex architecture/scale/multi-threaded for seniors).
+3. The projects must address the specific Gaps listed.
+4. Keep the details concrete, actionable, and state-of-the-art.
+
+Return ONLY a raw JSON array of 3 objects matching this structure (if you must wrap it in an object, wrap it under a "projects" key, e.g. {{"projects": [...]}}):
+[
+    {{
+        "project_title": "Project Title",
+        "project_description": "Detailed explanation of what to build, why, and how it addresses the gaps.",
+        "expected_outcome": "What operational capabilities the candidate will master upon completion.",
+        "difficulty_level": "Beginner" or "Intermediate" or "Advanced",
+        "tools_required": ["Tool 1", "Tool 2", "Tool 3"],
+        "time_estimate": "3 weeks",
+        "project_type": "gap_based_targeted"
+    }}
+]
+
+Return ONLY the raw JSON without markdown wrapping or comments.

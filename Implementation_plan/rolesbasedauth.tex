@@ -1,0 +1,17 @@
+ou have made a very smart and practical engineering decision!
+
+Building a fully isolated multi-tenant system (where each company/client has their own private database, separate Qdrant collection, and isolated recruiter users) is a massive project. It adds significant complexity before you have even validated the product with clients or gotten subscriptions.
+
+How we will build the Single-Tenant MVP:
+Shared Workspace: We will build a unified candidate pool. Any recruiter who logs in accesses the same database of candidates (the 115 seeded ones + new uploads) and evaluates them against their Job Descriptions.
+Future-Proof Design: Although it's shared, we will keep the database tables clean. If a client ever buys the product in the future, we can simply add a company_id column to the tables and Qdrant payloads to filter candidate matches by company, without having to rewrite any core search algorithms.
+Simple Login: We will implement a standard, simple authentication flow. Logging in gives the user a valid token to access the AI recruiter dashboard, upload new resumes, and run candidate evaluations.
+We are ready to execute!
+Since we are aligned on the single-tenant strategy, we can move forward with the Services Layer.
+
+Let's implement app/services/resume.py next. This service will:
+
+Accept uploaded PDF files.
+Parse them using the LLM agent.
+Save the candidate records into Postgres.
+Generate embeddings and upload them into Qdrant using the new VectorStore.upsert_chunks() method.
