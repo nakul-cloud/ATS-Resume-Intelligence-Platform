@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,9 +30,9 @@ class InterviewSession(Base, TimestampMixin):
     suggestions: Mapped[str | None] = mapped_column(Text, nullable=True) # JSON array of suggestions
     strengths: Mapped[str | None] = mapped_column(Text, nullable=True) # JSON array of strengths
 
-    candidate: Mapped["Candidate"] = relationship(back_populates="interview_sessions")
-    evaluation: Mapped["Evaluation | None"] = relationship(back_populates="interview_sessions")
-    questions: Mapped[list["InterviewQuestion"]] = relationship(
+    candidate: Mapped[Candidate] = relationship(back_populates="interview_sessions")
+    evaluation: Mapped[Evaluation | None] = relationship(back_populates="interview_sessions")
+    questions: Mapped[list[InterviewQuestion]] = relationship(
         back_populates="session", cascade="all, delete-orphan", order_by="InterviewQuestion.question_order"
     )
 
@@ -49,8 +49,8 @@ class InterviewQuestion(Base, TimestampMixin):
     difficulty_level: Mapped[str] = mapped_column(String(10), default="MEDIUM")  # EASY / MEDIUM / HARD
     question_order: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    session: Mapped["InterviewSession"] = relationship(back_populates="questions")
-    answer: Mapped["InterviewAnswer | None"] = relationship(
+    session: Mapped[InterviewSession] = relationship(back_populates="questions")
+    answer: Mapped[InterviewAnswer | None] = relationship(
         back_populates="question", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -70,4 +70,4 @@ class InterviewAnswer(Base, TimestampMixin):
     score: Mapped[float | None] = mapped_column(Float)  # e.g. 0-10
     follow_up_question: Mapped[str | None] = mapped_column(Text)
 
-    question: Mapped["InterviewQuestion"] = relationship(back_populates="answer")
+    question: Mapped[InterviewQuestion] = relationship(back_populates="answer")

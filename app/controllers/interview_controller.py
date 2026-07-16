@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.interview import InterviewService
+
 
 class InterviewController:
     @classmethod

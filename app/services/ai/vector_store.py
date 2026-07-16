@@ -87,11 +87,17 @@ class VectorStore:
         Executes a semantic vector search on Qdrant, optionally applying a dynamic domain filter
         and other metadata filters (e.g. skills, experience_min, candidate_id).
         """
-        from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchText, Range
-        
+        from qdrant_client.models import (
+            FieldCondition,
+            Filter,
+            MatchText,
+            MatchValue,
+            Range,
+        )
+
         client = cls.get_client()
         must_conditions = []
-        
+
         # 1. Main domain filter argument (backward compatibility)
         if domain:
             must_conditions.append(
@@ -100,7 +106,7 @@ class VectorStore:
                     match=MatchText(text=domain)
                 )
             )
-            
+
         # 2. General dynamic filters dict
         if filters:
             # Domain key in dict
@@ -112,7 +118,7 @@ class VectorStore:
                         match=MatchText(text=d)
                     )
                 )
-                
+
             # Skills key in dict (can be single skill string or list of skills)
             skills = filters.get("skills")
             if skills:
@@ -125,7 +131,7 @@ class VectorStore:
                             match=MatchText(text=skill)
                         )
                     )
-                    
+
             # Minimum experience years key
             exp_min = filters.get("experience_min")
             if exp_min is not None:
@@ -135,7 +141,7 @@ class VectorStore:
                         range=Range(gte=float(exp_min))
                     )
                 )
-                
+
             # Candidate ID check
             c_id = filters.get("candidate_id")
             if c_id is not None:
@@ -145,9 +151,9 @@ class VectorStore:
                         match=MatchValue(value=int(c_id))
                     )
                 )
-                
+
         query_filter = Filter(must=must_conditions) if must_conditions else None
-        
+
         results = await asyncio.to_thread(
             client.query_points,
             collection_name=cls.COLLECTION_NAME,

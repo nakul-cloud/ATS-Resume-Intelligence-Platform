@@ -1,5 +1,6 @@
 # Production-ready .gitignore for Resume Intelligence project
 # ----------------------------------------------------------
+
 # Python files & caches
 __pycache__/
 *.py[cod]
@@ -15,12 +16,15 @@ build/
 
 # Virtual environments & environment variables
 venv/
-.env
-.env.*
 .venv/
 ENV/
 env/
 .Python
+
+# Environment variables — keep example, ignore secrets
+.env
+.env.*
+!.env.example
 
 # IDE & editor settings
 .idea/
@@ -50,9 +54,9 @@ pnpm-debug.log*
 out/
 /dist/
 
-# Build output directories
-static/
-public/
+# Build output directories (project-specific — do not ignore intentional static/)
+# static/
+# public/
 
 # Security / secret keys
 *.key
@@ -69,7 +73,6 @@ coverage/
 htmlcov/
 *.cover
 *.coverage.*
-.cache
 nosetests.xml
 coverage.xml
 *.coveragerc
@@ -77,5 +80,29 @@ coverage.xml
 html_report/
 pytestdebug.log
 
-# Miscellaneous logs
+# Application logs (Loguru output)
 *.log
+application.json
+logs/
+
+# Temporary uploaded resume files (ARQ worker processes these — never commit)
+temp/
+
+# Qdrant local storage (used only in development without Docker)
+qdrant_storage/
+
+# Alembic migration __pycache__ (auto-generated)
+app/migrations/__pycache__/
+
+# SonarQube analysis cache
+.sonar/
+.scannerwork/
+
+# Graphify knowledge graph output (auto-generated, large)
+graphify-out/
+
+# uv lock file changes (commit uv.lock if you pin deps, otherwise ignore)
+# uv.lock
+
+# ARQ worker task artifacts
+arq_job_results/

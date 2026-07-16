@@ -1,7 +1,9 @@
 from datetime import timedelta
+
 from app.config.security import create_access_token
 from app.config.settings import settings
 from app.exceptions.custom_exceptions import AuthError
+
 
 class AuthService:
     # Pre-configured mock recruiter credentials for the generalized utility MVP
@@ -24,9 +26,9 @@ class AuthService:
             "sub": username,
             "role": "recruiter"
         }
-        
+
         access_token = create_access_token(data=token_data, expires_delta=expires_delta)
-        
+
         return {
             "access_token": access_token,
             "token_type": "bearer",

@@ -1,7 +1,8 @@
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 
 from app.services.candidate import CandidateService
+
 
 class CandidateController:
     @classmethod
@@ -12,7 +13,7 @@ class CandidateController:
         return await CandidateService.parse_and_map_session_resume(file_name=file_name, file_bytes=file_bytes, db=db)
 
     @classmethod
-    async def agent_self_evaluate(cls, db: AsyncSession, candidate_id: Optional[int] = None, candidate_data: Optional[dict] = None, jd_text: str = "") -> dict:
+    async def agent_self_evaluate(cls, db: AsyncSession, candidate_id: int | None = None, candidate_data: dict | None = None, jd_text: str = "") -> dict:
         """
         Performs candidate self-evaluation by delegating to CandidateService.
         """
@@ -22,10 +23,10 @@ class CandidateController:
     async def get_project_recommendations(
         cls,
         db: AsyncSession,
-        candidate_id: Optional[int] = None,
-        candidate_data: Optional[dict] = None,
-        gaps: Optional[List[str]] = None
-    ) -> List[dict]:
+        candidate_id: int | None = None,
+        candidate_data: dict | None = None,
+        gaps: list[str] | None = None
+    ) -> list[dict]:
         """
         Suggests targeted development projects by delegating to CandidateService.
         """
@@ -35,10 +36,10 @@ class CandidateController:
     async def optimize_resume(
         cls,
         db: AsyncSession,
-        candidate_id: Optional[int] = None,
-        candidate_data: Optional[dict] = None,
-        jd_text: Optional[str] = None,
-        focus_areas: Optional[List[str]] = None
+        candidate_id: int | None = None,
+        candidate_data: dict | None = None,
+        jd_text: str | None = None,
+        focus_areas: list[str] | None = None
     ) -> dict:
         """
         Suggests rewrites and bullet points by delegating to CandidateService.

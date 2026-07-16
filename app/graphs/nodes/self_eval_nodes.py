@@ -1,9 +1,10 @@
-from app.graphs.state import SelfEvalState
-from app.agents.resume_parser_agent import parse_resume_text
 from app.agents.evaluator import evaluate_candidate_against_jd
+from app.agents.resume_parser_agent import parse_resume_text
+from app.graphs.state import SelfEvalState
+from app.utils.logger import logger
 from app.utils.pdf_extractor import extract_pdf_text
 from app.utils.text_builder import build_embedding_text
-from app.utils.logger import logger
+
 
 async def se_evaluate_node(state: SelfEvalState) -> dict:
     """Node: Extracts, parses, and evaluates candidate against JD."""
@@ -45,7 +46,7 @@ async def se_evaluate_node(state: SelfEvalState) -> dict:
             text = state.get("resume_text", "")
 
         evaluation = evaluate_candidate_against_jd(c_dict, state["jd_text"])
-        
+
         # Only return the modified or new keys. Do NOT use **state.
         return {
             "resume_text": text,
@@ -62,13 +63,13 @@ async def se_evaluate_node(state: SelfEvalState) -> dict:
         }
     except Exception as e:
         logger.error(f"Self-eval failed: {e}")
-        return {"error": f"Evaluation failed: {str(e)}", "current_step": "evaluation_failed"}
+        return {"error": f"Evaluation failed: {e!s}", "current_step": "evaluation_failed"}
 
 async def se_decide_node(state: SelfEvalState) -> dict:
     """Node: Decision Agent that decides routing based on match score."""
     score = state.get("score_100", 0.0)
     logger.info(f"LangGraph Self-Eval Node: Decision Agent checking score ({score})...")
-    
+
     if score < 60:
         next_action = "confidence_feedback"
         reasoning = "Score < 60. Routing to Confidence Feedback."
@@ -78,7 +79,7 @@ async def se_decide_node(state: SelfEvalState) -> dict:
     else:
         next_action = "interview_prep"
         reasoning = "Score >= 80. Routing to Advanced Interview Prep."
-        
+
     return {
         "next_action": next_action,
         "decision_reasoning": reasoning,
@@ -89,7 +90,7 @@ async def se_confidence_feedback_node(state: SelfEvalState) -> dict:
     """Node: Generates basics-focused learning roadmap and confidence feedback."""
     logger.info("LangGraph Self-Eval Node: Executing Confidence Feedback Agent...")
     score = state.get("score_100", 0.0)
-    
+
     feedback = f"Based on your score of {score}, here is a plan to build confidence."
     roadmap = [
         "Weeks 1-2: Master core languages & algorithms fundamentals",
@@ -106,26 +107,26 @@ async def se_gap_analysis_node(state: SelfEvalState) -> dict:
     """Node: Generates targeted mock questions on gaps and a medium roadmap."""
     logger.info("LangGraph Self-Eval Node: Executing Gap Analysis Agent...")
     gaps = state.get("gaps", [])
-    
+
     feedback = "You are almost ready! Focus on bridging your specific technology gaps."
     roadmap = [
         "Week 1: Research and study the identified skill gaps",
         "Week 2: Build a mini-project targeting these missing libraries"
     ]
-    
+
     gap_questions = [f"How do you handle tasks requiring {g}?" for g in gaps[:3]]
-    
+
     return {
         "confidence_feedback": feedback,
         "learning_roadmap": roadmap,
-        "interview_questions": gap_questions, 
+        "interview_questions": gap_questions,
         "current_step": "gap_analysis_complete"
     }
 
 async def se_interview_prep_node(state: SelfEvalState) -> dict:
     """Node: Generates advanced system design mock questions and roadmap."""
     logger.info("LangGraph Self-Eval Node: Executing Advanced Prep Agent...")
-    
+
     feedback = "Excellent match! Focus on advanced system architecture."
     roadmap = [
         "Week 1: Practice complex architectural design patterns",

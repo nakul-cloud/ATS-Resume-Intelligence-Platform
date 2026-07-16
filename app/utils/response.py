@@ -1,5 +1,7 @@
 from typing import Any
+
 from fastapi.responses import JSONResponse
+
 
 def success_response(data: Any, message: str = "Success", status_code: int = 200) -> JSONResponse:
     """Standard success JSON response wrapper"""

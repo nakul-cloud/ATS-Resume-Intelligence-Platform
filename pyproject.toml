@@ -26,6 +26,7 @@ dependencies = [
     "passlib[argon2]>=1.7.4",
     "structlog>=24.0.0",
     "loguru>=0.7.3",
+    "secure>=2.0.1",
 ]
 
 [tool.ruff]

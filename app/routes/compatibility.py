@@ -1,27 +1,27 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.controllers.resume_controller import ResumeController
-from app.services.resume import ResumeService
-from app.services.auth import AuthService
+from app.controllers.candidate_controller import CandidateController
 from app.controllers.interview_controller import InterviewController
 from app.controllers.recruiter_controller import RecruiterController
-from app.controllers.candidate_controller import CandidateController
-from app.utils.logger import logger
-
-# Import schemas from standard schema modules
-from app.schemas.jd import JDRewriteRequest, JDEvaluationRequest
+from app.controllers.resume_controller import ResumeController
 from app.schemas.compat import (
     AgentSelfEvalRequest,
+    CandidatePersistRequest,
+    InterviewEvaluateRequest,
     ProjectsRecommendationRequest,
     ResumeRewriteRequest,
-    InterviewEvaluateRequest,
-    CandidatePersistRequest,
     StatelessInterviewStartRequest,
-    StatelessInterviewSubmitRequest
+    StatelessInterviewSubmitRequest,
 )
+
+# Import schemas from standard schema modules
+from app.schemas.jd import JDEvaluationRequest, JDRewriteRequest
+from app.services.auth import AuthService
+from app.services.resume import ResumeService
+from app.utils.logger import logger
 
 router = APIRouter()
 
@@ -93,17 +93,55 @@ async def persist_candidate(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Saves a session-wise parsed candidate explicitly to Postgres and Qdrant.
+    Saves a session-wise parsed candidate to PostgreSQL and enqueues Qdrant indexing task.
     """
     try:
-        candidate = await ResumeService.persist_parsed_candidate(db=db, data=request.model_dump())
+        # Save to database and flag for asynchronous vector embedding/indexing
+        candidate = await ResumeService.persist_parsed_candidate(db=db, data=request.model_dump(), async_embed=True)
+
+        # Enqueue the Qdrant indexing job via ArqQueueService
+        from app.services.arq_queue import ArqQueueService
+        await ArqQueueService.enqueue_job("persist_candidate_job", candidate.resume_id, request.model_dump())
+
         return {
             "status": "success",
-            "message": "Candidate profile persisted successfully",
-            "candidate_id": candidate.id
+            "message": "Candidate profile saved. Vector indexing is running in background.",
+            "candidate_id": candidate.id,
+            "resume_id": candidate.resume_id
         }
     except Exception as e:
         logger.error(f"Failed to persist candidate: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/v1/resume/status/{resume_id}")
+async def get_resume_status(
+    resume_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get the ingestion status of a resume processed asynchronously.
+    """
+    try:
+        from app.models.candidate import Resume
+        stmt = select(Resume).where(Resume.id == resume_id)
+        res = await db.execute(stmt)
+        resume_record = res.scalars().first()
+        if not resume_record:
+            raise HTTPException(status_code=404, detail="Resume not found")
+
+        return {
+            "status": "success",
+            "data": {
+                "resume_id": resume_record.id,
+                "status": resume_record.parse_status,
+                "error_message": resume_record.parse_error_message
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch resume status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -321,18 +359,18 @@ async def get_metrics_compat(db: AsyncSession = Depends(get_db)):
     """
     try:
         metrics = await RecruiterController.get_live_metrics(db=db)
-        
+
         # Format the response dictionaries to exactly match what Chart.js/da.html extracts
         total_candidates = metrics["key_metrics"]["total_candidates"]
         recent_uploads_7d = metrics["key_metrics"]["recent_uploads_7d"]
         avg_experience = metrics["key_metrics"]["avg_experience_years"]
         unique_skills = metrics["key_metrics"]["unique_skills"]
         avg_match_score = metrics["key_metrics"]["avg_match_score"]
-        
+
         score_dist = metrics["score_distribution"]
         top_skills = metrics["top_skills"]
         domain_dist = metrics["domain_distribution"]
-        
+
         # Calculate domain labels & values
         domain_labels = list(domain_dist.keys())[:7]
         domain_data = list(domain_dist.values())[:7]
@@ -384,16 +422,17 @@ async def get_candidate_compat(
     """
     Retrieves parsed candidate metadata by ID.
     """
-    from app.models.candidate import Candidate
-    from sqlalchemy.orm import selectinload
     from sqlalchemy import select
-    
+    from sqlalchemy.orm import selectinload
+
+    from app.models.candidate import Candidate
+
     stmt = select(Candidate).options(selectinload(Candidate.skills)).where(Candidate.id == candidate_id)
     res = await db.execute(stmt)
     candidate = res.scalar_one_or_none()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-        
+
     return {
         "status": "success",
         "candidate_id": candidate.id,

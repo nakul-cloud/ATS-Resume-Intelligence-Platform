@@ -44,3 +44,4 @@ Guidelines:
 4. 'interview_questions' must contain exactly 3 technical questions targeting the candidate's gaps or general engineering fit.
 5. The JSON must be valid and conform EXACTLY to the schema. Do not include markdown wrapping (like ```json ... ```) or any explanations in your response. Return ONLY raw JSON.
 6. Do NOT copy the sample values (such as the score 75 or example text) from the structure. You must calculate the actual score dynamically and generate unique, candidate-specific strengths, gaps, and questions.
+7. During Self Eval ,if if skills keywords or working around that stack matches then it should called matched ,like if it written in JD role (should be worked in qdrant ,faiss ,chromadb ,restapi --but the resume has written worked in embeddings or integrated embeddings/restapis then it should match logic wise ,but it should not happens for everycase .)

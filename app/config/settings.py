@@ -1,5 +1,5 @@
-from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     # APP SETTINGS
@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # REDIS SETTINGS
     redis_host: str = "localhost"
     redis_port: int = 6379
+
+    # MAIL SETTINGS (Mailtrap default credentials configured)
+    mail_host: str = "sandbox.smtp.mailtrap.io"
+    mail_port: int = 2525
+    mail_username: str | None = None
+    mail_password: str | None = None
+    mail_from_email: str = "noreply@resumeintelligence.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -2,12 +2,10 @@ import os
 from typing import Any
 
 from app.config.settings import settings
-from app.utils.logger import logger
-from app.utils.json_parser import extract_json
 from app.exceptions.custom_exceptions import AIServiceError
-
 from app.providers.llm.factory import get_groq_client
-
+from app.utils.json_parser import extract_json
+from app.utils.logger import logger
 
 # ---------------------------------------------------------------------------
 # Prompt loader — reads all named sections from interview_prompt.txt
@@ -28,7 +26,7 @@ def _load_prompts() -> dict[str, str]:
         os.path.dirname(os.path.dirname(__file__)), "prompts", "interview_prompt.txt"
     )
     try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
+        with open(prompt_path, encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
         logger.error(f"Failed to read interview prompts from {prompt_path}: {e}")

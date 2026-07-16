@@ -5,25 +5,23 @@ mock interview logic.
 """
 import json
 import uuid
-from typing import Any, Tuple
+from typing import Any
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import MultipleResultsFound
 
-from app.models.candidate import Candidate
-from app.models.evaluation import Evaluation, EvaluationSkillGap
-from app.models.interview import InterviewSession, InterviewQuestion, InterviewAnswer
 from app.agents.interview_eval_agent import (
-    generate_initial_question,
-    generate_next_stateless_question,
     evaluate_interview_answer,
     generate_final_report,
+    generate_initial_question,
+    generate_next_stateless_question,
 )
+from app.exceptions.custom_exceptions import AIServiceError, NotFoundError
+from app.models.candidate import Candidate
+from app.models.evaluation import Evaluation, EvaluationSkillGap
+from app.models.interview import InterviewAnswer, InterviewQuestion, InterviewSession
 from app.services.resume import ResumeService
 from app.utils.logger import logger
-from app.exceptions.custom_exceptions import NotFoundError, AIServiceError
-
 
 # ---------------------------------------------------------------------------
 # Stateful InterviewService (Original)
@@ -35,13 +33,13 @@ class InterviewService:
     @classmethod
     async def create_session(
         cls, db: AsyncSession, candidate_id: int, evaluation_id: int | None = None
-    ) -> Tuple[InterviewSession, InterviewQuestion]:
+    ) -> tuple[InterviewSession, InterviewQuestion]:
         """
         Starts a new mock interview session for a candidate, identifies gaps,
         generates the initial question, and records it in the database.
         """
         logger.info(f"Initializing interview session for Candidate ID {candidate_id}...")
-        
+
         # 1. Fetch Candidate
         candidate_res = await db.execute(select(Candidate).where(Candidate.id == candidate_id))
         candidate = candidate_res.scalar_one_or_none()
@@ -64,7 +62,7 @@ class InterviewService:
                 .order_by(Evaluation.created_at.desc())
                 .limit(5)
             )
-        
+
         gaps_res = await db.execute(eval_clause)
         gaps = list(gaps_res.scalars().all())
 
@@ -92,11 +90,11 @@ class InterviewService:
             question_order=1
         )
         db.add(first_question)
-        
+
         await db.commit()
         await db.refresh(session)
         await db.refresh(first_question)
-        
+
         logger.info(f"Interview session {session.id} started. First question generated.")
         return session, first_question
 
@@ -127,7 +125,7 @@ class InterviewService:
 
         candidate_res = await db.execute(select(Candidate).where(Candidate.id == session.candidate_id))
         candidate = candidate_res.scalar_one_or_none()
-        
+
         role = candidate.primary_role_title if candidate else "Software Engineer"
         domain = candidate.primary_domain if candidate else "Technology"
 
@@ -165,7 +163,7 @@ class InterviewService:
         # 4. Handle Next Question generation or Session Completion
         next_difficulty = eval_res.get("next_difficulty", "MEDIUM")
         follow_up = eval_res.get("follow_up_question")
-        
+
         # Check current question count
         count_res = await db.execute(
             select(func.count(InterviewQuestion.id))

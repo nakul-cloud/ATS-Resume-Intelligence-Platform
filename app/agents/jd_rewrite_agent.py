@@ -1,19 +1,18 @@
 from typing import Any
-from groq import Groq
 
 from app.config.settings import settings
-from app.utils.logger import logger
-from app.utils.json_parser import extract_json
 from app.exceptions.custom_exceptions import AIServiceError
-
 from app.providers.llm.factory import get_groq_client
+from app.utils.json_parser import extract_json
+from app.utils.logger import logger
+
 
 def parse_and_normalize_jd(jd_text: str) -> dict[str, Any]:
     """
     Normalizes and extracts structured details from a raw job description using Groq.
     """
     logger.info("Invoking JD Rewrite Agent...")
-    
+
     prompt = f"""
 You are an expert recruiter. Analyze the job description below and extract it into a structured JSON format.
 

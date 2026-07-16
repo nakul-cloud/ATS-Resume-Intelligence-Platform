@@ -1,15 +1,22 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sentence_transformers import SentenceTransformer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.candidate import Candidate
-from app.models.evaluation import Evaluation, EvaluationStrength, EvaluationSkillGap, EvaluationComparison, DecisionBand
 from app.agents.evaluator import evaluate_candidate_against_jd
-from app.services.ai.vector_store import VectorStore
 from app.config.settings import settings
+from app.exceptions.custom_exceptions import AIServiceError
+from app.models.candidate import Candidate
+from app.models.evaluation import (
+    DecisionBand,
+    Evaluation,
+    EvaluationComparison,
+    EvaluationSkillGap,
+    EvaluationStrength,
+)
+from app.services.ai.vector_store import VectorStore
 from app.utils.logger import logger
-from app.exceptions.custom_exceptions import AIServiceError, NotFoundError
+
 
 class EvaluationService:
     _model = None
@@ -27,7 +34,7 @@ class EvaluationService:
         """Maps an integer score (0-100) to a DecisionBand enum."""
         if score >= 80:
             return DecisionBand.HIGH
-        elif score >= 40:
+        if score >= 40:
             return DecisionBand.MEDIUM
         return DecisionBand.LOW
 
@@ -41,7 +48,7 @@ class EvaluationService:
         and saves results in PostgreSQL.
         """
         logger.info("Starting JD matching and candidate evaluations...")
-        
+
         # 1. Generate query embedding of the Job Description
         try:
             model = cls.get_model()
@@ -79,7 +86,7 @@ class EvaluationService:
                 .where(Candidate.id == candidate_id)
             )
             candidate = result.scalar_one_or_none()
-            
+
             if not candidate:
                 logger.warning(f"Candidate ID {candidate_id} found in Qdrant but missing in Postgres. Skipping.")
                 continue
@@ -107,18 +114,18 @@ class EvaluationService:
             if existing_eval:
                 logger.info(f"Retrieving cached evaluation for Candidate ID {candidate.id}...")
                 eval_record = existing_eval
-                
+
                 # Fetch related strengths, gaps
                 strengths_res = await db.execute(
                     select(EvaluationStrength.strength_text).where(EvaluationStrength.evaluation_id == eval_record.id)
                 )
                 strengths = list(strengths_res.scalars().all())
-                
+
                 gaps_res = await db.execute(
                     select(EvaluationSkillGap.gap_text).where(EvaluationSkillGap.evaluation_id == eval_record.id)
                 )
                 gaps = list(gaps_res.scalars().all())
-                
+
                 # Generate dynamic interview questions on-the-fly or fallback
                 # For simplicity, we run the evaluator agent if cached lists are empty, or use placeholders
                 eval_details = {

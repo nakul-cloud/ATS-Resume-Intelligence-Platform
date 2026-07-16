@@ -1,5 +1,6 @@
 from typing import Any
 
+
 def build_embedding_text(parsed: dict[str, Any]) -> str:
     """
     Constructs a structured text block from parsed candidate dictionary
@@ -11,7 +12,7 @@ def build_embedding_text(parsed: dict[str, Any]) -> str:
         # Fallback to skills list (API representation)
         skills = [s.get("skill_name", "") for s in parsed.get("skills", []) if s.get("skill_name")]
         skills_text = ", ".join(skills) if skills else "N/A"
-    
+
     return f"""
 Role: {parsed.get('primary_role_title') or 'N/A'}
 Domain: {parsed.get('primary_domain') or 'N/A'}

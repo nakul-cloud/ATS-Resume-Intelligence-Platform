@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
-from typing import Optional, Any
-from jose import jwt, JWTError
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from app.config.settings import settings
@@ -14,7 +14,7 @@ class User(BaseModel):
     username: str
     role: str
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     Generates a JWT access token containing the payload data.
     """
@@ -23,7 +23,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expires_in_minutes)
-        
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt

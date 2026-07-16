@@ -1,15 +1,12 @@
-from typing import Any
-import json
-import re
-
-from app.config.settings import settings
-from app.utils.logger import logger
-from app.utils.json_parser import extract_json
-from app.exceptions.custom_exceptions import AIServiceError
-
-from app.providers.llm.factory import get_groq_client
 
 import os
+
+from app.config.settings import settings
+from app.exceptions.custom_exceptions import AIServiceError
+from app.providers.llm.factory import get_groq_client
+from app.utils.json_parser import extract_json
+from app.utils.logger import logger
+
 
 def _build_prompt(prompt_tpl: str, candidate_profile: dict, jd_text: str) -> str:
     """Build prompt using safe string replacement.
@@ -54,7 +51,7 @@ def evaluate_candidate_against_jd(candidate_profile: dict, jd_text: str) -> dict
 
     prompt_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts", "evaluator_prompt.txt")
     try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
+        with open(prompt_path, encoding="utf-8") as f:
             prompt_tpl = f.read()
     except Exception as e:
         logger.error(f"Failed to read evaluator prompt from {prompt_path}: {e}")

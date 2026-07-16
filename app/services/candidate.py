@@ -1,19 +1,20 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional, Any
-import json
 import hashlib
+import json
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.agents.project_rec_agent import recommend_projects
+from app.agents.resume_rewrite_agent import optimize_resume_bullets
+from app.exceptions.custom_exceptions import NotFoundError
+from app.graphs.state import SelfEvalState
+from app.graphs.workflows import agentic_self_eval_app
 from app.models.candidate import Candidate
 from app.models.evaluation import Evaluation, EvaluationSkillGap
 from app.models.rewrite_cache import ResumeRewriteCache
-from app.graphs.workflows import agentic_self_eval_app
-from app.graphs.state import SelfEvalState
-from app.exceptions.custom_exceptions import NotFoundError
-from app.agents.project_rec_agent import recommend_projects
-from app.agents.resume_rewrite_agent import optimize_resume_bullets
 from app.utils.deduplication import compute_text_similarity
 from app.utils.logger import logger
-from sqlalchemy import select
+
 
 class CandidateService:
     @classmethod
@@ -24,13 +25,13 @@ class CandidateService:
         """
         from app.services.resume import ResumeService
         parsed_data = await ResumeService.parse_resume_session(file_name=file_name, file_bytes=file_bytes, db=db)
-        
+
         mapped_skills = [
             s.get("skill_name") if isinstance(s, dict) else s
             for s in parsed_data.get("skills", [])
             if (s.get("skill_name") if isinstance(s, dict) else s)
         ]
-        
+
         return {
             "status": "success",
             "message": "Resume parsed successfully (In-Memory Session)",
@@ -53,7 +54,7 @@ class CandidateService:
         }
 
     @classmethod
-    async def agent_self_evaluate(cls, db: AsyncSession, candidate_id: Optional[int] = None, candidate_data: Optional[dict] = None, jd_text: str = "") -> dict:
+    async def agent_self_evaluate(cls, db: AsyncSession, candidate_id: int | None = None, candidate_data: dict | None = None, jd_text: str = "") -> dict:
         """
         Performs candidate self-evaluation using the LangGraph agent workflow.
         """
@@ -119,10 +120,10 @@ class CandidateService:
     async def get_project_recommendations(
         cls,
         db: AsyncSession,
-        candidate_id: Optional[int] = None,
-        candidate_data: Optional[dict] = None,
-        gaps: Optional[List[str]] = None
-    ) -> List[dict]:
+        candidate_id: int | None = None,
+        candidate_data: dict | None = None,
+        gaps: list[str] | None = None
+    ) -> list[dict]:
         """
         Suggests targeted development projects to bridge candidate capability gaps.
         Calls recommend_projects agent directly without any hardcoded mock fail fallbacks.
@@ -167,10 +168,10 @@ class CandidateService:
     async def optimize_resume(
         cls,
         db: AsyncSession,
-        candidate_id: Optional[int] = None,
-        candidate_data: Optional[dict] = None,
-        jd_text: Optional[str] = None,
-        focus_areas: Optional[List[str]] = None
+        candidate_id: int | None = None,
+        candidate_data: dict | None = None,
+        jd_text: str | None = None,
+        focus_areas: list[str] | None = None
     ) -> dict:
         """
         Suggests rewrites and bullet points to improve the candidate's resume match.
@@ -209,7 +210,7 @@ class CandidateService:
         # Target JD and Focus Areas normalization
         jd_norm = (jd_text or "General software engineering target").strip()
         focus_list = sorted(focus_areas or ["Action Verbs", "Metrics & Impact"])
-        
+
         # Prepare cache keys
         cand_str = f"Summary: {summary}\nSkills: {skills_list}\nProjects: {projects_list}\nWork: {work_exp_list}"
         cand_hash = hashlib.sha256(cand_str.encode("utf-8")).hexdigest()

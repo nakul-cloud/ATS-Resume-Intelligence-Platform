@@ -1,32 +1,31 @@
 import os
-from typing import Any, List, Optional
-from groq import Groq
+from typing import Any
 
 from app.config.settings import settings
-from app.utils.logger import logger
-from app.utils.json_parser import extract_json
 from app.exceptions.custom_exceptions import AIServiceError
-
 from app.providers.llm.factory import get_groq_client
+from app.utils.json_parser import extract_json
+from app.utils.logger import logger
+
 
 def optimize_resume_bullets(
     candidate_name: str,
     experience_years: float,
     summary: str,
-    skills: List[str],
-    projects: List[dict],
+    skills: list[str],
+    projects: list[dict],
     jd_text: str,
-    focus_areas: List[str]
+    focus_areas: list[str]
 ) -> dict[str, Any]:
     """
     Sends candidate's details and the target Job Description to Groq to generate 
     highly customized, high-impact STAR optimized resume bullet point rewrites.
     """
     logger.info(f"Invoking Resume Rewrite Agent for candidate: {candidate_name}...")
-    
+
     skills_str = ", ".join(skills) if skills else "General technical skills"
     focus_str = ", ".join(focus_areas) if focus_areas else "Action Verbs, Metrics & Impact"
-    
+
     # Extract original highlights or summaries from experience/projects
     original_bullets = []
     if projects:
@@ -35,24 +34,24 @@ def optimize_resume_bullets(
             desc = p.get("description") or p.get("project_description") or ""
             if desc:
                 original_bullets.append(f"Worked on {title}: {desc}")
-                
+
     if not original_bullets:
         original_bullets = [
             "Responsible for full-stack engineering and API routes.",
             "Helped improve application load speeds and refactored code.",
             "Collaborated with product teams to roll out features."
         ]
-        
+
     bullets_formatted = "\n".join([f"- {b}" for b in original_bullets])
 
     prompt_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts", "rewriter_prompt.txt")
     try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
+        with open(prompt_path, encoding="utf-8") as f:
             prompt_tpl = f.read()
     except Exception as e:
         logger.error(f"Failed to read rewriter prompt from {prompt_path}: {e}")
         raise AIServiceError(f"Prompt load failed: {e}")
-        
+
     prompt = prompt_tpl.format(
         candidate_name=candidate_name,
         experience_years=experience_years,

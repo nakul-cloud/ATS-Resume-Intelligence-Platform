@@ -2,21 +2,28 @@ from fastapi import UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.resume import ResumeService
-from app.schemas.candidate import CandidateParsedData
-from app.exceptions.custom_exceptions import AppError, ValidationError
+from app.exceptions.custom_exceptions import AppError
 from app.utils.logger import logger
-from app.utils.response import success_response, error_response
+from app.utils.response import error_response, success_response
+
 
 class ResumeController:
     @classmethod
     async def upload_resume(cls, db: AsyncSession, file: UploadFile) -> JSONResponse:
         """
         Manages the HTTP request for uploading and parsing a resume PDF.
-        Validates file types, executes the parsing pipeline, and returns the appropriate HTTP status codes.
+        Validates file types, inserts a PENDING Resume record, enqueues the parsing job,
+        and returns a 202 Accepted response.
         """
+        import os
+        import uuid
+
+        import aiofiles
+
+        from app.models.candidate import Resume
+
         logger.info("ResumeController: Received resume upload request.")
-        
+
         # 1. HTTP Input Validation
         if not file.filename.lower().endswith(".pdf"):
             logger.warning("ResumeController: Rejected upload due to invalid file type.")
@@ -25,51 +32,43 @@ class ResumeController:
                 code="INVALID_FILE_TYPE",
                 status_code=status.HTTP_400_BAD_REQUEST
             )
-            
-        try:
-            # 2. Call Service Method
-            file_bytes = await file.read()
-            candidate = await ResumeService.parse_and_save_resume(
-                db=db,
-                file_name=file.filename,
-                file_bytes=file_bytes
-            )
-            
-            # 3. Map Pydantic structures for serialization safety
-            import json
-            work_exp = json.loads(candidate.work_experience_json) if candidate.work_experience_json else []
-            projects = json.loads(candidate.projects_json) if candidate.projects_json else []
-            accomplishments = json.loads(candidate.accomplishments_json) if candidate.accomplishments_json else []
-            hobbies = json.loads(candidate.hobbies_json) if candidate.hobbies_json else []
 
-            parsed_data = CandidateParsedData(
-                candidate_name=candidate.candidate_name,
-                email=candidate.email,
-                phone_number=candidate.phone_number,
-                primary_role_title=candidate.primary_role_title,
-                primary_domain=candidate.primary_domain,
-                total_experience_years=float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
-                highest_education=candidate.highest_education,
-                summary_text=candidate.summary_text,
-                skills=[{"skill_name": s.skill_name} for s in candidate.skills],
-                work_experience=work_exp,
-                projects=projects,
-                accomplishments=accomplishments,
-                hobbies=hobbies
+        try:
+            # 2. Read file bytes and save to a temporary folder
+            file_bytes = await file.read()
+            temp_dir = os.path.join(os.getcwd(), "temp")
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_filename = f"{uuid.uuid4()}_{file.filename}"
+            temp_filepath = os.path.join(temp_dir, temp_filename)
+
+            async with aiofiles.open(temp_filepath, "wb") as f:
+                await f.write(file_bytes)
+
+            # 3. Create a raw resume record in database with status PENDING
+            db_resume = Resume(
+                file_name=file.filename,
+                parse_status="PENDING",
+                raw_text=""
             )
-            
+            db.add(db_resume)
+            await db.commit()
+            await db.refresh(db_resume)
+
+            # 4. Enqueue the parsing job via ArqQueueService
+            from app.services.arq_queue import ArqQueueService
+            await ArqQueueService.enqueue_job("ingest_resume_job", db_resume.id, temp_filepath)
+
             response_payload = {
-                "status": "success",
-                "candidate_id": candidate.id,
-                "parsed_data": parsed_data.dict(),
-                "message": "Resume successfully uploaded, parsed, and indexed."
+                "status": "PENDING",
+                "resume_id": db_resume.id,
+                "message": "Resume successfully uploaded. Processing in background."
             }
-            
-            # 4. Map HTTP Status Code (201 Created)
+
+            # 5. Return HTTP Status Code (202 Accepted)
             return success_response(
                 data=response_payload,
-                message="Resume processed successfully",
-                status_code=status.HTTP_201_CREATED
+                message="Resume uploaded successfully",
+                status_code=status.HTTP_202_ACCEPTED
             )
 
         except AppError as e:
@@ -80,7 +79,7 @@ class ResumeController:
                 status_code=e.status_code
             )
         except Exception as e:
-            logger.error(f"ResumeController: Unexpected exception caught: {str(e)}")
+            logger.error(f"ResumeController: Unexpected exception caught: {e!s}")
             return error_response(
                 message="An unexpected error occurred during resume processing",
                 code="RESUME_PROCESSING_ERROR",

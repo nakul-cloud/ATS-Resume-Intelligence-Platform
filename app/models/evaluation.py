@@ -35,20 +35,20 @@ class Evaluation(Base, TimestampMixin):
         Enum(DecisionBand, name="decisionband", native_enum=True), nullable=False
     )
 
-    candidate: Mapped["Candidate"] = relationship(back_populates="evaluations")
-    strengths: Mapped[list["EvaluationStrength"]] = relationship(
+    candidate: Mapped[Candidate] = relationship(back_populates="evaluations")
+    strengths: Mapped[list[EvaluationStrength]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan"
     )
-    skill_gaps: Mapped[list["EvaluationSkillGap"]] = relationship(
+    skill_gaps: Mapped[list[EvaluationSkillGap]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan"
     )
-    comparisons: Mapped[list["EvaluationComparison"]] = relationship(
+    comparisons: Mapped[list[EvaluationComparison]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan", order_by="EvaluationComparison.rank"
     )
-    recommended_projects: Mapped[list["RecommendedProject"]] = relationship(
+    recommended_projects: Mapped[list[RecommendedProject]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan"
     )
-    interview_sessions: Mapped[list["InterviewSession"]] = relationship(back_populates="evaluation")
+    interview_sessions: Mapped[list[InterviewSession]] = relationship(back_populates="evaluation")
 
 
 class EvaluationStrength(Base):
@@ -60,7 +60,7 @@ class EvaluationStrength(Base):
     evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
     strength_text: Mapped[str] = mapped_column(String(500), nullable=False)
 
-    evaluation: Mapped["Evaluation"] = relationship(back_populates="strengths")
+    evaluation: Mapped[Evaluation] = relationship(back_populates="strengths")
 
 
 class EvaluationSkillGap(Base):
@@ -72,7 +72,7 @@ class EvaluationSkillGap(Base):
     evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
     gap_text: Mapped[str] = mapped_column(String(500), nullable=False)
 
-    evaluation: Mapped["Evaluation"] = relationship(back_populates="skill_gaps")
+    evaluation: Mapped[Evaluation] = relationship(back_populates="skill_gaps")
 
 
 class EvaluationComparison(Base, TimestampMixin):
@@ -96,5 +96,5 @@ class EvaluationComparison(Base, TimestampMixin):
     similarity_score: Mapped[float] = mapped_column(Float, nullable=False)  # cosine similarity from Qdrant
     rank: Mapped[int] = mapped_column(Integer, nullable=False)  # 1 = most similar to the JD
 
-    evaluation: Mapped["Evaluation"] = relationship(back_populates="comparisons")
-    compared_candidate: Mapped["Candidate"] = relationship(back_populates="appeared_in_comparisons")
+    evaluation: Mapped[Evaluation] = relationship(back_populates="comparisons")
+    compared_candidate: Mapped[Candidate] = relationship(back_populates="appeared_in_comparisons")

@@ -1,6 +1,8 @@
 from sqlalchemy import Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base, TimestampMixin
+
 
 class ResumeRewriteCache(Base, TimestampMixin):
     """

@@ -1,11 +1,14 @@
-import json
 import hashlib
-from sqlalchemy.ext.asyncio import AsyncSession
+import json
+
 from sqlalchemy import select
-from app.models.jd_cache import JDCache
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.agents.jd_rewrite_agent import parse_and_normalize_jd
-from app.utils.logger import logger
 from app.exceptions.custom_exceptions import AIServiceError
+from app.models.jd_cache import JDCache
+from app.utils.logger import logger
+
 
 class JDService:
 
@@ -38,7 +41,7 @@ class JDService:
         logger.info("JD Normalization: Cache MISS. Calling Groq LLM API to normalize Job Description.")
         try:
             structured_jd = parse_and_normalize_jd(clean_text)
-            
+
             # 4. Save to PostgreSQL cache
             try:
                 cache_rec = JDCache(jd_hash=jd_hash, normalized_json=json.dumps(structured_jd))

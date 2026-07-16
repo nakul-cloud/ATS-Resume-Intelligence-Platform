@@ -25,4 +25,4 @@ class RecommendedProject(Base, TimestampMixin):
     target_skill: Mapped[str | None] = mapped_column(String(255))
     priority: Mapped[str] = mapped_column(String(10), default="MEDIUM")  # LOW / MEDIUM / HIGH
 
-    evaluation: Mapped["Evaluation"] = relationship(back_populates="recommended_projects")
+    evaluation: Mapped[Evaluation] = relationship(back_populates="recommended_projects")

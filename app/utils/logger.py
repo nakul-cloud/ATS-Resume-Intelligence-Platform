@@ -1,5 +1,6 @@
 # app/utils/logger.py
 import sys
+
 from loguru import logger
 
 # Remove the default logger configuration

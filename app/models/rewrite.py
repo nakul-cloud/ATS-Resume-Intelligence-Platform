@@ -24,4 +24,4 @@ class RewriteSuggestion(Base, TimestampMixin):
     suggested_text: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
 
-    candidate: Mapped["Candidate"] = relationship(back_populates="rewrite_suggestions")
+    candidate: Mapped[Candidate] = relationship(back_populates="rewrite_suggestions")

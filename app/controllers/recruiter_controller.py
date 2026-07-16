@@ -1,13 +1,10 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 
-from app.services.metrics import MetricsService
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.evaluation import EvaluationService
 from app.services.jd import JDService
-from app.models.candidate import Candidate
-from app.graphs.workflows import agentic_self_eval_app
-from app.graphs.state import SelfEvalState
-from app.exceptions.custom_exceptions import NotFoundError
+from app.services.metrics import MetricsService
+
 
 class RecruiterController:
     @classmethod
@@ -19,7 +16,7 @@ class RecruiterController:
         return metrics
 
     @classmethod
-    async def evaluate_jd(cls, db: AsyncSession, jd_text: str, domain: Optional[str] = None, top_k: int = 5) -> dict:
+    async def evaluate_jd(cls, db: AsyncSession, jd_text: str, domain: str | None = None, top_k: int = 5) -> dict:
         """
         Finds and scores candidate matches against Job Description queries.
         """

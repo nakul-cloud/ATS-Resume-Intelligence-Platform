@@ -1,25 +1,28 @@
+import asyncio
 import json
 from decimal import Decimal
-from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-from sentence_transformers import SentenceTransformer
-from fastapi import HTTPException
 
-from app.models.candidate import Resume, Candidate, CandidateSkill
+from fastapi import HTTPException
+from sentence_transformers import SentenceTransformer
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.agents.resume_parser_agent import parse_resume_text
-from app.services.ai.vector_store import VectorStore
-from app.utils.pdf_extractor import extract_pdf_text
-from app.utils.text_builder import build_embedding_text
-from app.utils.logger import logger
 from app.config.settings import settings
 from app.exceptions.custom_exceptions import AIServiceError, StorageError
+from app.models.candidate import Candidate, CandidateSkill, Resume
+from app.services.ai.vector_store import VectorStore
 from app.utils.deduplication import (
-    compute_file_hash,
-    compute_text_similarity,
     compute_field_diff,
-    compute_skills_diff
+    compute_file_hash,
+    compute_skills_diff,
+    compute_text_similarity,
 )
+from app.utils.logger import logger
+from app.utils.pdf_extractor import extract_pdf_text
+from app.utils.text_builder import build_embedding_text
+
 
 class ResumeService:
     _model = None
@@ -33,7 +36,7 @@ class ResumeService:
         return cls._model
 
     @classmethod
-    async def parse_and_save_resume(cls, db: AsyncSession, file_name: str, file_bytes: bytes) -> Candidate:
+    async def parse_and_save_resume(cls, db: AsyncSession, file_name: str, file_bytes: bytes, existing_resume_id: int | None = None) -> Candidate:
         """
         Parses an uploaded resume PDF, extracts structured candidate data,
         utilizing a three-tiered deduplication strategy to overwrite candidate
@@ -80,7 +83,7 @@ class ResumeService:
 
             for success_resume in success_resumes:
                 compare_text = success_resume.raw_text
-                
+
                 # Dynamic fallback for historic restore records missing raw_text
                 if not compare_text:
                     stmt = select(Candidate).options(selectinload(Candidate.skills)).where(Candidate.resume_id == success_resume.id).order_by(Candidate.id.desc())
@@ -108,14 +111,38 @@ class ResumeService:
                         candidate = cand_res.scalars().first()
                         if candidate:
                             logger.info(f"INFO: [Deduplication] High plain-text similarity ({sim * 100:.1f}%) detected against Resume ID {success_resume.id}. Skipping LLM parsing. Reusing Candidate ID {candidate.id}.")
-                            
-                            # Self-healing: Dynamically populate file_hash and raw_text if missing!
-                            if not success_resume.file_hash or not success_resume.raw_text:
-                                success_resume.file_hash = file_hash
-                                success_resume.raw_text = resume_text
+
+                            # Self-healing & Worker Integration: Link candidate to new resume if background upload
+                            if existing_resume_id:
+                                stmt_db_res = select(Resume).where(Resume.id == existing_resume_id)
+                                res_db_res = await db.execute(stmt_db_res)
+                                db_resume = res_db_res.scalar_one()
+
+                                db_resume.file_hash = file_hash
+                                db_resume.raw_text = resume_text
+                                db_resume.parse_status = "SUCCESS"
+
+                                old_resume_id = candidate.resume_id
+                                candidate.resume = db_resume
+                                await db.flush()
+
+                                # Safely clean up the old resume without triggering delete-orphan cascade
+                                if old_resume_id and old_resume_id != db_resume.id:
+                                    stmt_del_res = select(Resume).where(Resume.id == old_resume_id)
+                                    res_del_res = await db.execute(stmt_del_res)
+                                    old_resume_rec = res_del_res.scalars().first()
+                                    if old_resume_rec:
+                                        old_resume_rec.candidate = None
+                                        await db.delete(old_resume_rec)
                                 await db.commit()
-                                logger.info(f"INFO: [Deduplication] Dynamically self-healed file_hash and raw_text for legacy Resume ID {success_resume.id}.")
-                                
+                                logger.info(f"INFO: [Deduplication] Linked Candidate ID {candidate.id} to new background Resume ID {db_resume.id} and marked SUCCESS.")
+                            else:
+                                if not success_resume.file_hash or not success_resume.raw_text:
+                                    success_resume.file_hash = file_hash
+                                    success_resume.raw_text = resume_text
+                                    await db.commit()
+                                    logger.info(f"INFO: [Deduplication] Dynamically self-healed file_hash and raw_text for legacy Resume ID {success_resume.id}.")
+
                             # Ensure the candidate is indexed in Qdrant if they aren't already
                             try:
                                 client = VectorStore.get_client()
@@ -126,7 +153,7 @@ class ResumeService:
                                 )
                                 if not existing_points:
                                     logger.info(f"INFO: [Deduplication] Candidate ID {candidate.id} cache hit but missing in Qdrant resumes. Generating vector embeddings and indexing...")
-                                    
+
                                     c_dict = {
                                         "primary_role_title": candidate.primary_role_title,
                                         "primary_domain": candidate.primary_domain,
@@ -165,11 +192,18 @@ class ResumeService:
 
                             return candidate
 
-        # Create new raw resume record (PENDING)
-        db_resume = Resume(file_name=file_name, parse_status="PENDING", file_hash=file_hash, raw_text=resume_text)
-        db.add(db_resume)
-        await db.commit()
-        await db.refresh(db_resume)
+        # Create or fetch existing raw resume record
+        if existing_resume_id:
+            stmt = select(Resume).where(Resume.id == existing_resume_id)
+            res = await db.execute(stmt)
+            db_resume = res.scalar_one()
+            db_resume.file_hash = file_hash
+            db_resume.raw_text = resume_text
+        else:
+            db_resume = Resume(file_name=file_name, parse_status="PENDING", file_hash=file_hash, raw_text=resume_text)
+            db.add(db_resume)
+            await db.commit()
+            await db.refresh(db_resume)
 
         try:
             # 4. Call AI Resume Parser Agent (Cache Miss)
@@ -296,13 +330,15 @@ class ResumeService:
 
                 # Link candidate to the new resume and clean up the old resume to avoid orphans
                 old_resume_id = candidate.resume_id
-                candidate.resume_id = db_resume.id
+                candidate.resume = db_resume
+                await db.flush()
 
                 if old_resume_id and old_resume_id != db_resume.id:
                     stmt_del_res = select(Resume).where(Resume.id == old_resume_id)
                     res_del_res = await db.execute(stmt_del_res)
                     old_resume_rec = res_del_res.scalars().first()
                     if old_resume_rec:
+                        old_resume_rec.candidate = None
                         await db.delete(old_resume_rec)
 
             else:
@@ -391,14 +427,14 @@ class ResumeService:
             raise AIServiceError(f"Failed to process and index resume: {e}") from e
 
     @classmethod
-    async def parse_resume_session(cls, file_name: str, file_bytes: bytes, db: Optional[AsyncSession] = None) -> dict:
+    async def parse_resume_session(cls, file_name: str, file_bytes: bytes, db: AsyncSession | None = None) -> dict:
         """
         Parses an uploaded resume PDF in-memory, completely bypassing database
         persistence and vector stores. If db is provided and the file hash already
         exists, retrieves the parsed details from database cache.
         """
         import re
-        
+
         # Check if same resume is already present in DB by file hash
         file_hash = compute_file_hash(file_bytes)
         if file_hash and db:
@@ -411,13 +447,13 @@ class ResumeService:
                 candidate = c_res.scalars().first()
                 if candidate:
                     logger.info(f"Session-wise Deduplication: Duplicate file hash detected (SHA-256: {file_hash}). Reusing existing candidate record and skipping LLM call.")
-                    
+
                     skills = [{"skill_name": s.skill_name} for s in candidate.skills]
                     projects = json.loads(candidate.projects_json) if candidate.projects_json else []
                     acc = json.loads(candidate.accomplishments_json) if candidate.accomplishments_json else []
                     hobbies = json.loads(candidate.hobbies_json) if candidate.hobbies_json else []
                     work_exp = json.loads(candidate.work_experience_json) if candidate.work_experience_json else []
-                    
+
                     return {
                         "candidate_name": candidate.candidate_name,
                         "email": candidate.email,
@@ -437,7 +473,7 @@ class ResumeService:
         logger.info(f"Session-wise Processing: Parsing resume {file_name} in-memory")
         resume_text = extract_pdf_text(file_bytes)
         parsed_data = parse_resume_text(resume_text)
-        
+
         # Regex validation to ensure parsed email contains @ and domain extension like .com, .co.in
         email_pattern = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
         parsed_email = parsed_data.get("email") or ""
@@ -451,7 +487,7 @@ class ResumeService:
                 parsed_data["email"] = "candidate@example.com"
         else:
             parsed_data["email"] = matches[0].strip()
-            
+
         # Write to database as a cache hit for future checks (even if candidate reloads/logouts)
         if db:
             try:
@@ -463,12 +499,12 @@ class ResumeService:
                 )
                 db.add(db_resume)
                 await db.flush()
-                
+
                 exp_years = parsed_data.get("total_experience_years")
                 total_exp = Decimal(str(exp_years)) if exp_years is not None else Decimal("0.0")
                 skills_list = [s.get("skill_name", "") if isinstance(s, dict) else str(s) for s in parsed_data.get("skills", [])]
                 skills_text = ", ".join(skills_list)
-                
+
                 # Check identity first to avoid duplicate Candidate records
                 candidate = None
                 email = parsed_data.get("email")
@@ -485,7 +521,7 @@ class ResumeService:
                     ).order_by(Candidate.id.desc())
                     c_res = await db.execute(stmt)
                     candidate = c_res.scalars().first()
-                    
+
                 if candidate:
                     # Update resume link and field information
                     candidate.resume_id = db_resume.id
@@ -521,26 +557,27 @@ class ResumeService:
                     )
                     db.add(candidate)
                     await db.flush()
-                
+
                 # Sync skills
-                from app.models.candidate import CandidateSkill
                 from sqlalchemy import delete
+
+                from app.models.candidate import CandidateSkill
                 await db.execute(delete(CandidateSkill).where(CandidateSkill.candidate_id == candidate.id))
                 for s in parsed_data.get("skills", []):
                     skill_name = s.get("skill_name") if isinstance(s, dict) else str(s)
                     if skill_name:
                         db.add(CandidateSkill(candidate_id=candidate.id, skill_name=skill_name))
-                
+
                 await db.commit()
                 logger.info(f"Session-wise Processing: Saved parsed resume {file_name} structure to DB cache for future uploads (SHA-256: {file_hash}).")
             except Exception as e:
                 await db.rollback()
                 logger.warning(f"Session-wise Processing: Could not write parsed resume cache to database: {e}")
-            
+
         return parsed_data
 
     @classmethod
-    async def persist_parsed_candidate(cls, db: AsyncSession, data: dict) -> Candidate:
+    async def persist_parsed_candidate(cls, db: AsyncSession, data: dict, async_embed: bool = False) -> Candidate:
         """
         Saves a pre-parsed candidate profile directly to Postgres and indexes in Qdrant,
         using standard deduplication to update existing records if emails match.
@@ -548,14 +585,14 @@ class ResumeService:
         email = data.get("email")
         phone = data.get("phone_number")
         name = data.get("name")
-        
+
         # Check if they exist by email first
         candidate = None
         if email:
             stmt = select(Candidate).options(selectinload(Candidate.skills)).where(Candidate.email.ilike(email.strip())).order_by(Candidate.id.desc())
             res = await db.execute(stmt)
             candidate = res.scalars().first()
-            
+
         if not candidate and name and phone:
             stmt = select(Candidate).options(selectinload(Candidate.skills)).where(
                 Candidate.candidate_name.ilike(name.strip()),
@@ -567,16 +604,16 @@ class ResumeService:
         skills_list = data.get("skills", [])
         skills_text = ", ".join(skills_list)
         total_exp = Decimal(str(data.get("experience", 0.0)))
-        
+
         # Create a placeholder Resume record
         db_resume = Resume(
             file_name="persisted_profile.pdf",
-            parse_status="SUCCESS",
+            parse_status="PENDING" if async_embed else "SUCCESS",
             raw_text=data.get("summary_text") or ""
         )
         db.add(db_resume)
         await db.flush()
-        
+
         if candidate:
             # Overwrite existing candidate fields
             candidate.candidate_name = name or candidate.candidate_name
@@ -592,13 +629,13 @@ class ResumeService:
             candidate.accomplishments_json = json.dumps(data.get("accomplishments", []))
             candidate.hobbies_json = json.dumps(data.get("hobbies", []))
             candidate.work_experience_json = json.dumps(data.get("work_experience", []))
-            
+
             # Clear old skills and write new ones
             stmt_del_skills = delete(CandidateSkill).where(CandidateSkill.candidate_id == candidate.id)
             await db.execute(stmt_del_skills)
             for skill in skills_list:
                 db.add(CandidateSkill(candidate_id=candidate.id, skill_name=skill))
-                
+
             # Replace candidate resume link
             old_resume_id = candidate.resume_id
             candidate.resume_id = db_resume.id
@@ -632,36 +669,39 @@ class ResumeService:
         await db.refresh(candidate)
 
         # Index/Overwrite in Qdrant
-        c_dict = {
-            "primary_role_title": candidate.primary_role_title,
-            "primary_domain": candidate.primary_domain,
-            "total_experience_years": candidate.total_experience_years,
-            "highest_education": candidate.highest_education,
-            "summary_text": candidate.summary_text,
-            "skills_text": candidate.skills_text,
-        }
-        profile_text = build_embedding_text(c_dict)
-        model = cls.get_model()
-        vector = model.encode(profile_text).tolist()
-
-        payload = {
-            "metadata": {
-                "candidate_id": candidate.id,
-                "candidate_name": candidate.candidate_name,
+        if not async_embed:
+            c_dict = {
                 "primary_role_title": candidate.primary_role_title,
                 "primary_domain": candidate.primary_domain,
-                "total_experience_years": float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
-                "skills_text": candidate.skills_text,
+                "total_experience_years": candidate.total_experience_years,
+                "highest_education": candidate.highest_education,
                 "summary_text": candidate.summary_text,
-            },
-            "content": profile_text,
-        }
-        await VectorStore.upsert_chunks(
-            ids=[candidate.id],
-            vectors=[vector],
-            payloads=[payload]
-        )
-        logger.info(f"Successfully persisted candidate ID {candidate.id} to Postgres and Qdrant.")
+                "skills_text": candidate.skills_text,
+            }
+            profile_text = build_embedding_text(c_dict)
+            model = cls.get_model()
+            vector = model.encode(profile_text).tolist()
+
+            payload = {
+                "metadata": {
+                    "candidate_id": candidate.id,
+                    "candidate_name": candidate.candidate_name,
+                    "primary_role_title": candidate.primary_role_title,
+                    "primary_domain": candidate.primary_domain,
+                    "total_experience_years": float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
+                    "skills_text": candidate.skills_text,
+                    "summary_text": candidate.summary_text,
+                },
+                "content": profile_text,
+            }
+            await VectorStore.upsert_chunks(
+                ids=[candidate.id],
+                vectors=[vector],
+                payloads=[payload]
+            )
+            logger.info(f"Successfully persisted candidate ID {candidate.id} to Postgres and Qdrant.")
+        else:
+            logger.info(f"Successfully saved candidate ID {candidate.id} to PostgreSQL. Vector indexing will run asynchronously.")
         return candidate
 
 

@@ -361,6 +361,158 @@ npm run dev
 
 ---
 
+## ⚙️ Background Worker — ARQ Task Queue
+
+Asynchronous jobs are processed by a dedicated **ARQ worker** (Redis-backed task queue) to decouple slow operations (LLM calls, embedding generation, PDF parsing) from the HTTP request lifecycle.
+
+### Worker Architecture
+
+```
+HTTP Upload (202 Accepted)
+        │
+        ▼
+ ┌──────────────────────────┐
+ │  Resume Controller       │
+ │  1. Save file to temp/   │
+ │  2. Write PENDING to DB  │
+ │  3. Enqueue ARQ job      │
+ └──────────────────────────┘
+        │
+        ▼ (Redis queue)
+ ┌──────────────────────────┐
+ │  ARQ Background Worker   │
+ │  1. Read temp file       │
+ │  2. SHA-256 dedup check  │
+ │  3. LLM parsing          │
+ │  4. Save to PostgreSQL   │
+ │  5. Generate embedding   │
+ │  6. Upsert to Qdrant     │
+ │  7. Send email alert     │
+ │  8. Cleanup temp file    │
+ └──────────────────────────┘
+```
+
+### Two Specialized Workers
+
+| Worker Task | Handler | Purpose |
+|---|---|---|
+| `ingest_resume_job` | Recruiter upload flow | Full pipeline: PDF → Parse → PostgreSQL + Qdrant |
+| `persist_candidate_job` | Candidate self-upload flow | Offloads only the Qdrant embedding step |
+
+### Worker Configuration
+
+```python
+class WorkerSettings:
+    functions = [ingest_resume_job, persist_candidate_job]
+    max_jobs = 5      # concurrent job limit
+    max_tries = 1     # no automatic retries to avoid cascading failures
+    job_timeout = 630 # hard ceiling per task (seconds)
+```
+
+### Starting the Worker
+
+```bash
+just worker
+# Expands to: uv run arq worker.main.WorkerSettings
+```
+
+---
+
+## 🔁 Deduplication Strategy
+
+Three-tier resume deduplication to prevent duplicate records and unnecessary LLM API calls:
+
+| Tier | Check | Action |
+|------|-------|--------|
+| **Tier 1 — SHA-256 Hash** | Exact binary file match | Immediately skip all processing; return cached candidate |
+| **Tier 2 — Plain-text Similarity** | `≥98%` cosine similarity of extracted text | Skip LLM parsing; reuse existing candidate; re-link new resume record |
+| **Tier 3 — Identity Match** | Email or (Name + Phone) match in PostgreSQL | Update existing candidate profile fields, re-index Qdrant vector if fields changed |
+
+### Safe Cascade Deletion
+When an existing candidate uploads a new version of their resume, the system:
+1. Reassigns the `Candidate.resume` relationship to the new `Resume` object (not just the FK integer)
+2. Explicitly severs `old_resume_rec.candidate = None` before deleting the old record
+3. This prevents SQLAlchemy's `cascade="all, delete-orphan"` from cascading and deleting the active `Candidate` row
+
+---
+
+## 📧 Email Alerting — Mailtrap SMTP
+
+An asynchronous HTML email alert is sent after every background worker task completion.
+
+- **Provider:** Mailtrap Sandbox SMTP (`sandbox.smtp.mailtrap.io`)
+- **Trigger:** After every `ingest_resume_job` (success or failure)
+- **Recipient:** Admin email configured via `MAIL_ADMIN_EMAIL` env variable
+- **Dispatch:** Runs via `asyncio.run_in_executor` so it never blocks the worker coroutine
+
+### Email Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MAIL_HOST` | SMTP hostname (`sandbox.smtp.mailtrap.io`) |
+| `MAIL_PORT` | SMTP port (`2525`) |
+| `MAIL_USERNAME` | Mailtrap inbox username |
+| `MAIL_PASSWORD` | Mailtrap inbox password |
+| `MAIL_FROM_EMAIL` | Sender address shown in the email |
+| `MAIL_ADMIN_EMAIL` | Destination alert email address |
+
+---
+
+## 🛡️ Production Middleware Stack
+
+The `app/main.py` lifespan startup validates infrastructure before accepting any traffic:
+
+```
+Startup Sequence
+│
+├── 1. PostgreSQL connection check (SELECT 1)
+├── 2. Qdrant collection initialization
+├── 3. GROQ_API_KEY validation
+└── 4. Global Redis pool initialization (ARQ)
+```
+
+Middlewares applied to every request (in order):
+
+| Middleware | Library | Purpose |
+|---|---|---|
+| **Rate Limiting** | SlowAPI | Per-IP request rate limiting backed by Redis |
+| **CORS** | FastAPI CORSMiddleware | Cross-origin resource sharing headers |
+| **GZip Compression** | Starlette GZipMiddleware | Compresses responses > 1000 bytes |
+| **Security Headers** | `secure` (Helmet equivalent) | CSP, HSTS, X-Frame-Options, etc. |
+
+### Rate Limiter (`app/config/rate_limiter.py`)
+
+```python
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=f"redis://{settings.redis_host}:{settings.redis_port}/1"
+)
+```
+
+---
+
+## 🧰 Justfile Commands
+
+All development workflows are managed via [`just`](https://github.com/casey/just):
+
+```bash
+just dev          # Start FastAPI server (uvicorn, port 8000, hot reload)
+just worker       # Start ARQ background worker
+just venv         # Spawn a new shell with .venv activated (Windows)
+just migration    # Auto-generate Alembic migration (usage: just migration "msg")
+just migrate      # Apply all pending migrations (alembic upgrade head)
+just seed         # Seed the database with sample data
+just lint         # Run Ruff linter
+just format       # Run Ruff formatter + linter checks
+just sonar        # Run SonarQube analysis
+just docker-up    # Start all Docker containers (PostgreSQL, Qdrant, Redis, Adminer)
+just docker-down  # Stop and remove all containers
+just docker-logs  # Tail container logs
+just docker-ps    # List running containers
+```
+
+---
+
 ## 🔧 Environment Variables
 
 | Variable | Description | Default |
@@ -369,9 +521,16 @@ npm run dev
 | `GROQ_API_KEY` | Groq API key for LLM inference | — |
 | `QDRANT_URL` | Qdrant server URL | `http://localhost:6333` |
 | `REDIS_HOST` | Redis hostname | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
 | `JWT_SECRET_KEY` | JWT signing secret | dev default |
 | `LLM_FALLBACK_MODELS` | Comma-separated model fallback chain | `openai/gpt-oss-120b,qwen/qwen3.6-27b,llama-3.3-70b-versatile` |
 | `LLM_BASE_URL` | Custom LLM endpoint URL | Groq default |
+| `MAIL_HOST` | SMTP hostname for email alerts | `sandbox.smtp.mailtrap.io` |
+| `MAIL_PORT` | SMTP port | `2525` |
+| `MAIL_USERNAME` | SMTP auth username | — |
+| `MAIL_PASSWORD` | SMTP auth password | — |
+| `MAIL_FROM_EMAIL` | Sender address for alerts | — |
+| `MAIL_ADMIN_EMAIL` | Admin email to receive worker alerts | — |
 
 ---
 
@@ -395,10 +554,15 @@ pytest tests/ -v --cov=app
 | **Vector DB** | Qdrant (cosine similarity search) |
 | **Relational DB** | PostgreSQL 16 + SQLAlchemy 2.0 |
 | **Migrations** | Alembic |
-| **Caching** | Redis 7 |
+| **Task Queue** | ARQ (Redis-backed async background jobs) |
+| **Caching / Queue** | Redis 7 |
+| **Email Alerts** | Mailtrap SMTP (sandbox) |
+| **Rate Limiting** | SlowAPI + Redis storage |
+| **Security Headers** | `secure` (Helmet equivalent) |
 | **Auth** | JWT (python-jose) + Argon2 password hashing |
 | **Logging** | Loguru (structured JSON + console) |
 | **Linting** | Ruff |
+| **Task Runner** | Just (justfile) |
 | **Frontend** | React 18 + Vite + TailwindCSS |
 | **Infrastructure** | Docker Compose |
 

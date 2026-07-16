@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.config.security import get_current_user, User
+from app.config.security import User, get_current_user
 from app.controllers.resume_controller import ResumeController
 
 router = APIRouter()

@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
 from app.routes.v1.endpoints.auth import router as auth_router
-from app.routes.v1.endpoints.resume import router as resume_router
+from app.routes.v1.endpoints.health import router as health_router
 from app.routes.v1.endpoints.interview import router as interview_router
 from app.routes.v1.endpoints.jd import router as jd_router
 from app.routes.v1.endpoints.recruiter import router as recruiter_router
-from app.routes.v1.endpoints.health import router as health_router
+from app.routes.v1.endpoints.resume import router as resume_router
 
 router = APIRouter()
 

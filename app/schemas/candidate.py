@@ -1,37 +1,38 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class CandidateSkillSchema(BaseModel):
     skill_name: str
 
 class CandidateParsedData(BaseModel):
-    candidate_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    phone_number: Optional[str] = None
-    primary_role_title: Optional[str] = None
-    primary_domain: Optional[str] = None
-    total_experience_years: Optional[float] = None
-    highest_education: Optional[str] = None
-    summary_text: Optional[str] = None
+    candidate_name: str | None = None
+    email: EmailStr | None = None
+    phone_number: str | None = None
+    primary_role_title: str | None = None
+    primary_domain: str | None = None
+    total_experience_years: float | None = None
+    highest_education: str | None = None
+    summary_text: str | None = None
     skills: list[CandidateSkillSchema] = []
-    work_experience: Optional[list] = []
-    projects: Optional[list] = []
-    accomplishments: Optional[list] = []
-    hobbies: Optional[list] = []
+    work_experience: list | None = []
+    projects: list | None = []
+    accomplishments: list | None = []
+    hobbies: list | None = []
 
 class CandidateResponse(BaseModel):
     id: int
-    resume_id: Optional[int] = None
-    candidate_name: Optional[str] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
-    primary_role_title: Optional[str] = None
-    primary_domain: Optional[str] = None
-    total_experience_years: Optional[float] = None
-    highest_education: Optional[str] = None
-    summary_text: Optional[str] = None
-    skills_text: Optional[str] = None
+    resume_id: int | None = None
+    candidate_name: str | None = None
+    email: str | None = None
+    phone_number: str | None = None
+    primary_role_title: str | None = None
+    primary_domain: str | None = None
+    total_experience_years: float | None = None
+    highest_education: str | None = None
+    summary_text: str | None = None
+    skills_text: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -40,6 +41,6 @@ class CandidateResponse(BaseModel):
 
 class ResumeParseResponse(BaseModel):
     status: str
-    candidate_id: Optional[int] = None
-    parsed_data: Optional[CandidateParsedData] = None
+    candidate_id: int | None = None
+    parsed_data: CandidateParsedData | None = None
     message: str

@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
-from app.config.security import get_current_user, User
+from app.config.security import User, get_current_user
 from app.controllers.recruiter_controller import RecruiterController
-from app.utils.response import success_response, error_response
 from app.exceptions.custom_exceptions import AppError
+from app.utils.response import error_response, success_response
 
 router = APIRouter()
 

@@ -1,6 +1,9 @@
 from io import BytesIO
+
 import pdfplumber
+
 from app.utils.logger import logger
+
 
 def extract_pdf_text(pdf_bytes: bytes, max_chars: int = 10000) -> str:
     """
@@ -9,7 +12,7 @@ def extract_pdf_text(pdf_bytes: bytes, max_chars: int = 10000) -> str:
     """
     if not pdf_bytes:
         raise ValueError("PDF bytes cannot be empty")
-        
+
     try:
         text_chunks = []
         with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
@@ -17,12 +20,12 @@ def extract_pdf_text(pdf_bytes: bytes, max_chars: int = 10000) -> str:
                 text = page.extract_text()
                 if text:
                     text_chunks.append(text)
-                    
+
         extracted_text = "\n".join(text_chunks).strip()
-        
+
         if not extracted_text:
             raise ValueError("No text could be extracted from the PDF (it might be scanned or empty)")
-            
+
         # Remove null bytes to prevent CharacterNotInRepertoireError in PostgreSQL
         sanitized_text = extracted_text.replace("\x00", "")
         return sanitized_text[:max_chars]

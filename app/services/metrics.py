@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
-from collections import Counter
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
 
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.exceptions.custom_exceptions import StorageError
 from app.models.candidate import Candidate, CandidateSkill
 from app.models.evaluation import Evaluation
 from app.utils.logger import logger
-from app.exceptions.custom_exceptions import StorageError
+
 
 class MetricsService:
     @classmethod
@@ -16,7 +17,7 @@ class MetricsService:
         Translates original Supabase query logic into direct SQLAlchemy statements.
         """
         logger.info("Aggregating system and candidate metrics...")
-        
+
         try:
             # 1. Total Candidates count
             total_cand_res = await db.execute(select(func.count(Candidate.id)))
@@ -78,7 +79,7 @@ class MetricsService:
                 # Calculate month boundaries
                 month_start = (datetime.utcnow().replace(day=1) - timedelta(days=30 * i)).replace(day=1)
                 next_month = (month_start + timedelta(days=32)).replace(day=1)
-                
+
                 monthly_uploads_res = await db.execute(
                     select(func.count(Candidate.id))
                     .where(Candidate.created_at >= month_start, Candidate.created_at < next_month)
@@ -100,7 +101,7 @@ class MetricsService:
             # 10. Match Score Distribution
             eval_scores_res = await db.execute(select(Evaluation.match_score))
             scores = eval_scores_res.scalars().all()
-            
+
             score_ranges = {
                 "0-50%": 0,
                 "51-60%": 0,

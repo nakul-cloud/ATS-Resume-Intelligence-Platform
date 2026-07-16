@@ -28,7 +28,7 @@ class Resume(Base, TimestampMixin):
     file_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
     raw_text: Mapped[str | None] = mapped_column(Text)
 
-    candidate: Mapped["Candidate | None"] = relationship(
+    candidate: Mapped[Candidate | None] = relationship(
         back_populates="resume", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -55,21 +55,21 @@ class Candidate(Base, TimestampMixin):
     hobbies_json: Mapped[str | None] = mapped_column(Text)
     work_experience_json: Mapped[str | None] = mapped_column(Text)
 
-    resume: Mapped["Resume"] = relationship(back_populates="candidate")
-    skills: Mapped[list["CandidateSkill"]] = relationship(
+    resume: Mapped[Resume] = relationship(back_populates="candidate")
+    skills: Mapped[list[CandidateSkill]] = relationship(
         back_populates="candidate", cascade="all, delete-orphan"
     )
-    evaluations: Mapped[list["Evaluation"]] = relationship(
+    evaluations: Mapped[list[Evaluation]] = relationship(
         back_populates="candidate", cascade="all, delete-orphan"
     )
-    interview_sessions: Mapped[list["InterviewSession"]] = relationship(
+    interview_sessions: Mapped[list[InterviewSession]] = relationship(
         back_populates="candidate", cascade="all, delete-orphan"
     )
-    rewrite_suggestions: Mapped[list["RewriteSuggestion"]] = relationship(
+    rewrite_suggestions: Mapped[list[RewriteSuggestion]] = relationship(
         back_populates="candidate", cascade="all, delete-orphan"
     )
     # Rows where this candidate showed up as one of the ranked comparisons in someone else's evaluation
-    appeared_in_comparisons: Mapped[list["EvaluationComparison"]] = relationship(
+    appeared_in_comparisons: Mapped[list[EvaluationComparison]] = relationship(
         back_populates="compared_candidate", cascade="all, delete-orphan"
     )
 
@@ -83,4 +83,4 @@ class CandidateSkill(Base):
     candidate_id: Mapped[int] = mapped_column(ForeignKey("candidates_parsed.id", ondelete="CASCADE"))
     skill_name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    candidate: Mapped["Candidate"] = relationship(back_populates="skills")
+    candidate: Mapped[Candidate] = relationship(back_populates="skills")
