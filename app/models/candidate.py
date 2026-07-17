@@ -6,13 +6,18 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.constants.db import (
+    CANDIDATE_ID_FK,
+    CASCADE_DELETE_ORPHAN,
+    ON_DELETE_CASCADE_SQL,
+)
+
 from .base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from .evaluation import Evaluation, EvaluationComparison
     from .interview import InterviewSession
     from .rewrite import RewriteSuggestion
-
 
 
 class Resume(Base, TimestampMixin):
@@ -29,7 +34,7 @@ class Resume(Base, TimestampMixin):
     raw_text: Mapped[str | None] = mapped_column(Text)
 
     candidate: Mapped[Candidate | None] = relationship(
-        back_populates="resume", uselist=False, cascade="all, delete-orphan"
+        back_populates="resume", uselist=False, cascade=CASCADE_DELETE_ORPHAN
     )
 
 
@@ -39,7 +44,7 @@ class Candidate(Base, TimestampMixin):
     __tablename__ = "candidates_parsed"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    resume_id: Mapped[int | None] = mapped_column(ForeignKey("resumes_raw.id", ondelete="CASCADE"))
+    resume_id: Mapped[int | None] = mapped_column(ForeignKey("resumes_raw.id", ondelete=ON_DELETE_CASCADE_SQL))
 
     candidate_name: Mapped[str | None] = mapped_column(String(255))
     email: Mapped[str | None] = mapped_column(String(255))
@@ -57,20 +62,20 @@ class Candidate(Base, TimestampMixin):
 
     resume: Mapped[Resume] = relationship(back_populates="candidate")
     skills: Mapped[list[CandidateSkill]] = relationship(
-        back_populates="candidate", cascade="all, delete-orphan"
+        back_populates="candidate", cascade=CASCADE_DELETE_ORPHAN
     )
     evaluations: Mapped[list[Evaluation]] = relationship(
-        back_populates="candidate", cascade="all, delete-orphan"
+        back_populates="candidate", cascade=CASCADE_DELETE_ORPHAN
     )
     interview_sessions: Mapped[list[InterviewSession]] = relationship(
-        back_populates="candidate", cascade="all, delete-orphan"
+        back_populates="candidate", cascade=CASCADE_DELETE_ORPHAN
     )
     rewrite_suggestions: Mapped[list[RewriteSuggestion]] = relationship(
-        back_populates="candidate", cascade="all, delete-orphan"
+        back_populates="candidate", cascade=CASCADE_DELETE_ORPHAN
     )
     # Rows where this candidate showed up as one of the ranked comparisons in someone else's evaluation
     appeared_in_comparisons: Mapped[list[EvaluationComparison]] = relationship(
-        back_populates="compared_candidate", cascade="all, delete-orphan"
+        back_populates="compared_candidate", cascade=CASCADE_DELETE_ORPHAN
     )
 
 
@@ -80,7 +85,7 @@ class CandidateSkill(Base):
     __tablename__ = "candidate_skills"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidates_parsed.id", ondelete="CASCADE"))
+    candidate_id: Mapped[int] = mapped_column(ForeignKey(CANDIDATE_ID_FK, ondelete=ON_DELETE_CASCADE_SQL))
     skill_name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     candidate: Mapped[Candidate] = relationship(back_populates="skills")

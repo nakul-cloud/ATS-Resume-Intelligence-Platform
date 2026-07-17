@@ -2,7 +2,7 @@ set shell := ["powershell", "-Command"]
 
 # Start the development server on port 8000 (aligned with Vite proxy target)
 dev:
-    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 # Start the background worker for document ingestion tasks
 worker:
@@ -30,12 +30,9 @@ format:
     uv run ruff check . --fix
     uv run ruff format .
 
-# Run sonarqube analysis
+# Run sonarqube analysis (reads config from sonar-project.properties)
 sonar:
-    uv run pysonar \
-        --sonar-host-url=http://localhost:9000 \
-        --sonar-token=sqp_3b7feae1c57bc659f215f0696cc15e348ac6a615 \
-        --sonar-project-key=resume-intelligence
+    uv run pysonar
 
 # Check code without modifying (useful for CI)
 lint:

@@ -3,7 +3,7 @@ from app.graphs.state import InterviewEvalState
 from app.utils.logger import logger
 
 
-async def ie_evaluate_answer_node(state: InterviewEvalState) -> dict:
+def ie_evaluate_answer_node(state: InterviewEvalState) -> dict:
     """Node: Grades candidate answer and generates follow-up."""
     logger.info("LangGraph Interview Node: Evaluating answer...")
     try:

@@ -9,6 +9,7 @@ from app.config.settings import settings
 class VectorStore:
     _client = None
     COLLECTION_NAME = "resumes"
+    FIELD_PRIMARY_DOMAIN = "metadata.primary_domain"
 
     @classmethod
     def get_client(cls) -> QdrantClient:
@@ -52,7 +53,7 @@ class VectorStore:
         # Create text index on metadata.primary_domain to enable dynamic full-text MatchText filtering
         client.create_payload_index(
             collection_name=cls.COLLECTION_NAME,
-            field_name="metadata.primary_domain",
+            field_name=cls.FIELD_PRIMARY_DOMAIN,
             field_schema="text"
         )
 
@@ -87,72 +88,8 @@ class VectorStore:
         Executes a semantic vector search on Qdrant, optionally applying a dynamic domain filter
         and other metadata filters (e.g. skills, experience_min, candidate_id).
         """
-        from qdrant_client.models import (
-            FieldCondition,
-            Filter,
-            MatchText,
-            MatchValue,
-            Range,
-        )
-
         client = cls.get_client()
-        must_conditions = []
-
-        # 1. Main domain filter argument (backward compatibility)
-        if domain:
-            must_conditions.append(
-                FieldCondition(
-                    key="metadata.primary_domain",
-                    match=MatchText(text=domain)
-                )
-            )
-
-        # 2. General dynamic filters dict
-        if filters:
-            # Domain key in dict
-            d = filters.get("domain")
-            if d:
-                must_conditions.append(
-                    FieldCondition(
-                        key="metadata.primary_domain",
-                        match=MatchText(text=d)
-                    )
-                )
-
-            # Skills key in dict (can be single skill string or list of skills)
-            skills = filters.get("skills")
-            if skills:
-                if isinstance(skills, str):
-                    skills = [skills]
-                for skill in skills:
-                    must_conditions.append(
-                        FieldCondition(
-                            key="metadata.skills_text",
-                            match=MatchText(text=skill)
-                        )
-                    )
-
-            # Minimum experience years key
-            exp_min = filters.get("experience_min")
-            if exp_min is not None:
-                must_conditions.append(
-                    FieldCondition(
-                        key="metadata.total_experience_years",
-                        range=Range(gte=float(exp_min))
-                    )
-                )
-
-            # Candidate ID check
-            c_id = filters.get("candidate_id")
-            if c_id is not None:
-                must_conditions.append(
-                    FieldCondition(
-                        key="metadata.candidate_id",
-                        match=MatchValue(value=int(c_id))
-                    )
-                )
-
-        query_filter = Filter(must=must_conditions) if must_conditions else None
+        query_filter = cls._build_search_filter(domain, filters)
 
         results = await asyncio.to_thread(
             client.query_points,
@@ -162,3 +99,74 @@ class VectorStore:
             limit=limit
         )
         return results.points
+
+    @classmethod
+    def _build_search_filter(cls, domain: str | None, filters: dict | None) -> Any:
+        """Builds a Qdrant query Filter object from domain and other metadata parameters."""
+        from qdrant_client.models import FieldCondition, Filter, MatchText
+
+        must_conditions = []
+
+        # 1. Main domain filter argument (backward compatibility)
+        if domain:
+            must_conditions.append(
+                FieldCondition(
+                    key=cls.FIELD_PRIMARY_DOMAIN,
+                    match=MatchText(text=domain)
+                )
+            )
+
+        # 2. General dynamic filters dict
+        if filters:
+            cls._apply_dynamic_filters(must_conditions, filters)
+
+        return Filter(must=must_conditions) if must_conditions else None
+
+    @classmethod
+    def _apply_dynamic_filters(cls, must_conditions: list, filters: dict) -> None:
+        """Helper to append dynamic metadata field filters to conditions list."""
+        from qdrant_client.models import FieldCondition, MatchText, MatchValue, Range
+
+        # Domain key in dict
+        d = filters.get("domain")
+        if d:
+            must_conditions.append(
+                FieldCondition(
+                    key=cls.FIELD_PRIMARY_DOMAIN,
+                    match=MatchText(text=d)
+                )
+            )
+
+        # Skills key in dict (can be single skill string or list of skills)
+        skills = filters.get("skills")
+        if skills:
+            skills_list = [skills] if isinstance(skills, str) else skills
+            for skill in skills_list:
+                must_conditions.append(
+                    FieldCondition(
+                        key="metadata.skills_text",
+                        match=MatchText(text=skill)
+                    )
+                )
+
+        # Minimum experience years key
+        exp_min = filters.get("experience_min")
+        if exp_min is not None:
+            must_conditions.append(
+                FieldCondition(
+                    key="metadata.total_experience_years",
+                    range=Range(gte=float(exp_min))
+                )
+            )
+
+        # Candidate ID check
+        c_id = filters.get("candidate_id")
+        if c_id is not None:
+            must_conditions.append(
+                FieldCondition(
+                    key="metadata.candidate_id",
+                    match=MatchValue(value=int(c_id))
+                )
+            )
+
+

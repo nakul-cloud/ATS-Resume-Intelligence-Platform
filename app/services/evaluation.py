@@ -79,14 +79,7 @@ class EvaluationService:
             candidate_id = match.id
             similarity_score = match.score
 
-            # Fetch candidate details from Postgres
-            result = await db.execute(
-                select(Candidate)
-                .options(selectinload(Candidate.skills))
-                .where(Candidate.id == candidate_id)
-            )
-            candidate = result.scalar_one_or_none()
-
+            candidate = await cls._get_candidate(db, candidate_id)
             if not candidate:
                 logger.warning(f"Candidate ID {candidate_id} found in Qdrant but missing in Postgres. Skipping.")
                 continue
@@ -114,79 +107,12 @@ class EvaluationService:
             if existing_eval:
                 logger.info(f"Retrieving cached evaluation for Candidate ID {candidate.id}...")
                 eval_record = existing_eval
-
-                # Fetch related strengths, gaps
-                strengths_res = await db.execute(
-                    select(EvaluationStrength.strength_text).where(EvaluationStrength.evaluation_id == eval_record.id)
-                )
-                strengths = list(strengths_res.scalars().all())
-
-                gaps_res = await db.execute(
-                    select(EvaluationSkillGap.gap_text).where(EvaluationSkillGap.evaluation_id == eval_record.id)
-                )
-                gaps = list(gaps_res.scalars().all())
-
-                # Generate dynamic interview questions on-the-fly or fallback
-                # For simplicity, we run the evaluator agent if cached lists are empty, or use placeholders
-                eval_details = {
-                    "score": eval_record.match_score,
-                    "strengths": strengths,
-                    "gaps": gaps,
-                    "interview_questions": [f"Targeted question about: {g}" for g in gaps][:3]
-                }
+                eval_details = await cls._get_cached_evaluation(db, eval_record)
             else:
-                # Call Evaluator Agent
-                eval_details = evaluate_candidate_against_jd(c_dict, jd_text)
-                match_score = eval_details["score"]
-                decision_band = cls._get_decision_band(match_score)
+                eval_record, eval_details = await cls._create_new_evaluation(db, candidate.id, jd_text, c_dict)
 
-                # Save Evaluation to Postgres
-                eval_record = Evaluation(
-                    candidate_id=candidate.id,
-                    job_description_text=jd_text,
-                    match_score=match_score,
-                    decision_band=decision_band
-                )
-                db.add(eval_record)
-                await db.flush()  # Generate eval_record.id
-
-                # Save strengths
-                for str_text in eval_details.get("strengths", []):
-                    db.add(EvaluationStrength(evaluation_id=eval_record.id, strength_text=str_text))
-
-                # Save gaps
-                for gap_text in eval_details.get("gaps", []):
-                    db.add(EvaluationSkillGap(evaluation_id=eval_record.id, gap_text=gap_text))
-
-            # Update or create EvaluationComparison (tracks the current search rank)
-            comp_result = await db.execute(
-                select(EvaluationComparison).where(
-                    EvaluationComparison.evaluation_id == eval_record.id,
-                    EvaluationComparison.compared_candidate_id == candidate.id
-                )
-            )
-            comparison = comp_result.scalar_one_or_none()
-
-            if not comparison:
-                comparison = EvaluationComparison(
-                    evaluation_id=eval_record.id,
-                    compared_candidate_id=candidate.id,
-                    similarity_score=similarity_score,
-                    rank=rank
-                )
-                db.add(comparison)
-            else:
-                comparison.similarity_score = similarity_score
-                comparison.rank = rank
-
+            await cls._save_or_update_comparison(db, eval_record.id, candidate.id, similarity_score, rank)
             await db.commit()
-
-            # Compile response schema fields
-            import json
-            work_exp = json.loads(candidate.work_experience_json) if candidate.work_experience_json else []
-            projects = json.loads(candidate.projects_json) if candidate.projects_json else []
-            accomplishments = json.loads(candidate.accomplishments_json) if candidate.accomplishments_json else []
-            hobbies = json.loads(candidate.hobbies_json) if candidate.hobbies_json else []
 
             evaluation_results.append({
                 "candidate_id": candidate.id,
@@ -203,11 +129,104 @@ class EvaluationService:
                 "gaps": eval_details["gaps"],
                 "interview_questions": eval_details["interview_questions"],
                 "skills": [s.skill_name for s in candidate.skills],
-                "work_experience": work_exp,
-                "projects": projects,
-                "accomplishments": accomplishments,
-                "hobbies": hobbies
+                "work_experience": cls._parse_json_field(candidate.work_experience_json),
+                "projects": cls._parse_json_field(candidate.projects_json),
+                "accomplishments": cls._parse_json_field(candidate.accomplishments_json),
+                "hobbies": cls._parse_json_field(candidate.hobbies_json)
             })
 
         logger.info("Candidate matching and evaluations saved successfully.")
         return evaluation_results
+
+    # --- PRIVATE MODULARIZATION HELPERS ---
+
+    @classmethod
+    async def _get_candidate(cls, db: AsyncSession, candidate_id: int) -> Candidate | None:
+        """Fetches the candidate details from Postgres."""
+        result = await db.execute(
+            select(Candidate)
+            .options(selectinload(Candidate.skills))
+            .where(Candidate.id == candidate_id)
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    async def _get_cached_evaluation(cls, db: AsyncSession, eval_record: Evaluation) -> dict:
+        """Fetches and prepares structured data for an existing evaluation."""
+        strengths_res = await db.execute(
+            select(EvaluationStrength.strength_text).where(EvaluationStrength.evaluation_id == eval_record.id)
+        )
+        strengths = list(strengths_res.scalars().all())
+
+        gaps_res = await db.execute(
+            select(EvaluationSkillGap.gap_text).where(EvaluationSkillGap.evaluation_id == eval_record.id)
+        )
+        gaps = list(gaps_res.scalars().all())
+
+        return {
+            "score": eval_record.match_score,
+            "strengths": strengths,
+            "gaps": gaps,
+            "interview_questions": [f"Targeted question about: {g}" for g in gaps][:3]
+        }
+
+    @classmethod
+    async def _create_new_evaluation(cls, db: AsyncSession, candidate_id: int, jd_text: str, c_dict: dict) -> tuple[Evaluation, dict]:
+        """Calls the evaluator agent and persists the new evaluation record to Postgres."""
+        eval_details = evaluate_candidate_against_jd(c_dict, jd_text)
+        match_score = eval_details["score"]
+        decision_band = cls._get_decision_band(match_score)
+
+        # Save Evaluation to Postgres
+        eval_record = Evaluation(
+            candidate_id=candidate_id,
+            job_description_text=jd_text,
+            match_score=match_score,
+            decision_band=decision_band
+        )
+        db.add(eval_record)
+        await db.flush()  # Generate eval_record.id
+
+        # Save strengths
+        for str_text in eval_details.get("strengths", []):
+            db.add(EvaluationStrength(evaluation_id=eval_record.id, strength_text=str_text))
+
+        # Save gaps
+        for gap_text in eval_details.get("gaps", []):
+            db.add(EvaluationSkillGap(evaluation_id=eval_record.id, gap_text=gap_text))
+
+        return eval_record, eval_details
+
+    @classmethod
+    async def _save_or_update_comparison(cls, db: AsyncSession, eval_id: int, candidate_id: int, similarity_score: float, rank: int) -> None:
+        """Updates or creates the EvaluationComparison record."""
+        comp_result = await db.execute(
+            select(EvaluationComparison).where(
+                EvaluationComparison.evaluation_id == eval_id,
+                EvaluationComparison.compared_candidate_id == candidate_id
+            )
+        )
+        comparison = comp_result.scalar_one_or_none()
+
+        if not comparison:
+            comparison = EvaluationComparison(
+                evaluation_id=eval_id,
+                compared_candidate_id=candidate_id,
+                similarity_score=similarity_score,
+                rank=rank
+            )
+            db.add(comparison)
+        else:
+            comparison.similarity_score = similarity_score
+            comparison.rank = rank
+
+    @classmethod
+    def _parse_json_field(cls, json_str: str | None) -> list:
+        """Safely parses candidate JSON list attributes."""
+        import json
+        if not json_str:
+            return []
+        try:
+            return json.loads(json_str)
+        except Exception:
+            return []

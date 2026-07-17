@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -13,6 +13,8 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     """
     Standard check evaluating database connection health and system versions.
     """
+    timestamp = datetime.now(UTC).isoformat()
+
     try:
         # Simple query to check Postgres connection
         await db.execute(text("SELECT 1"))
@@ -20,7 +22,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         return {
             "status": "healthy",
             "postgres_connected": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp":timestamp,
             "features": [
                 "LangGraph Multi-Agent Workflows",
                 "Qdrant Search Profiles",
@@ -33,5 +35,5 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             "status": "unhealthy",
             "postgres_connected": False,
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": timestamp
         }

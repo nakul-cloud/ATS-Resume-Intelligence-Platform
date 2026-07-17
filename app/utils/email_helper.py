@@ -29,7 +29,7 @@ def _send_smtp_email_sync(subject: str, html_content: str, to_email: str):
     msg.attach(MIMEText(html_content, "html"))
 
     try:
-        with smtplib.SMTP(settings.mail_host, settings.mail_port) as server:
+        with smtplib.SMTP(settings.mail_host, settings.mail_port, timeout=10.0) as server:
             server.starttls()
             server.login(settings.mail_username, settings.mail_password)
             server.sendmail(settings.mail_from_email, to_email, msg.as_string())

@@ -18,6 +18,7 @@ from app.agents.interview_eval_agent import (
 )
 from app.exceptions.custom_exceptions import AIServiceError, NotFoundError
 from app.models.candidate import Candidate
+from app.constants.general import DEFAULT_DOMAIN_TECH, DEFAULT_ROLE_ENGINEER
 from app.models.evaluation import Evaluation, EvaluationSkillGap
 from app.models.interview import InterviewAnswer, InterviewQuestion, InterviewSession
 from app.services.resume import ResumeService
@@ -46,8 +47,8 @@ class InterviewService:
         if not candidate:
             raise NotFoundError(f"Candidate with ID {candidate_id} not found")
 
-        role = candidate.primary_role_title or "Software Engineer"
-        domain = candidate.primary_domain or "Technology"
+        role = candidate.primary_role_title or DEFAULT_ROLE_ENGINEER
+        domain = candidate.primary_domain or DEFAULT_DOMAIN_TECH
         skills = candidate.skills_text or "General software skills"
 
         # 2. Retrieve Gaps (prioritize specific evaluation ID, fallback to latest evaluation)
@@ -126,8 +127,8 @@ class InterviewService:
         candidate_res = await db.execute(select(Candidate).where(Candidate.id == session.candidate_id))
         candidate = candidate_res.scalar_one_or_none()
 
-        role = candidate.primary_role_title if candidate else "Software Engineer"
-        domain = candidate.primary_domain if candidate else "Technology"
+        role = candidate.primary_role_title if candidate else DEFAULT_ROLE_ENGINEER
+        domain = candidate.primary_domain if candidate else DEFAULT_DOMAIN_TECH
 
         # Check if question was already answered
         existing_answer = await db.execute(
@@ -291,7 +292,7 @@ async def _resolve_candidate(
         record = Candidate(
             candidate_name=candidate_data.get("name") or "Candidate",
             email=candidate_data.get("email") or "candidate@example.com",
-            primary_role_title=candidate_data.get("role") or "Software Engineer",
+            primary_role_title=candidate_data.get("role") or DEFAULT_ROLE_ENGINEER,
             primary_domain=candidate_data.get("domain") or "Tech",
         )
         db.add(record)
@@ -437,48 +438,16 @@ class StatelessInterviewService:
         total_questions = len(new_history)
 
         # Determine next state
-        next_question = None
-        status = "IN_PROGRESS"
-        can_upgrade = False
-
-        if is_advanced:
-            if total_questions < 8:
-                q_data = generate_next_stateless_question(
-                    candidate_profile=candidate,
-                    jd_text=jd_text,
-                    gaps=gaps or [],
-                    history=new_history,
-                    is_advanced=True,
-                    tier=tier,
-                )
-                next_question = {
-                    "question_text": q_data["question_text"],
-                    "difficulty_level": q_data.get("difficulty_level", "HARD"),
-                }
-            else:
-                status = "COMPLETED"
-
-        else:
-            if total_questions < 5:
-                q_data = generate_next_stateless_question(
-                    candidate_profile=candidate,
-                    jd_text=jd_text,
-                    gaps=gaps or [],
-                    history=new_history,
-                    is_advanced=False,
-                    tier=tier,
-                )
-                next_question = {
-                    "question_text": q_data["question_text"],
-                    "difficulty_level": q_data.get("difficulty_level", "MEDIUM"),
-                }
-            else:
-                threshold = _upgrade_threshold(tier)
-                if threshold is not None and average_score >= threshold:
-                    status = "UPGRADE_PROMPT"
-                    can_upgrade = True
-                else:
-                    status = "COMPLETED"
+        next_question, status, can_upgrade = cls._determine_next_state(
+            candidate=candidate,
+            jd_text=jd_text,
+            gaps=gaps,
+            new_history=new_history,
+            is_advanced=is_advanced,
+            tier=tier,
+            average_score=average_score,
+            total_questions=total_questions,
+        )
 
         # Persist to Postgres
         await cls._persist_answer_and_next_question(
@@ -674,3 +643,103 @@ class StatelessInterviewService:
         session.confidence_feedback = final_report.get("confidence_feedback")
         session.suggestions = json.dumps(final_report.get("suggestions", []))
         session.strengths = json.dumps(final_report.get("strengths", []))
+
+    @classmethod
+    def _determine_next_state(
+        cls,
+        *,
+        candidate: dict[str, Any],
+        jd_text: str,
+        gaps: list[str],
+        new_history: list[dict[str, Any]],
+        is_advanced: bool,
+        tier: str,
+        average_score: float,
+        total_questions: int,
+    ) -> tuple[dict[str, Any] | None, str, bool]:
+        """
+        Determines the next state, generates the next question, and reports upgrade readiness.
+        Returns a tuple of (next_question_dict, status_string, can_upgrade_bool).
+        """
+        next_question = None
+        status = "IN_PROGRESS"
+        can_upgrade = False
+
+        if is_advanced:
+            if total_questions < 8:
+                q_data = generate_next_stateless_question(
+                    candidate_profile=candidate,
+                    jd_text=jd_text,
+                    gaps=gaps or [],
+                    history=new_history,
+                    is_advanced=True,
+                    tier=tier,
+                )
+                next_question = {
+                    "question_text": q_data["question_text"],
+                    "difficulty_level": q_data.get("difficulty_level", "HARD"),
+                }
+            else:
+                status = "COMPLETED"
+        else:
+            if total_questions < 5:
+                q_data = generate_next_stateless_question(
+                    candidate_profile=candidate,
+                    jd_text=jd_text,
+                    gaps=gaps or [],
+                    history=new_history,
+                    is_advanced=False,
+                    tier=tier,
+                )
+                next_question = {
+                    "question_text": q_data["question_text"],
+                    "difficulty_level": q_data.get("difficulty_level", "MEDIUM"),
+                }
+            else:
+                threshold = _upgrade_threshold(tier)
+                if threshold is not None and average_score >= threshold:
+                    status = "UPGRADE_PROMPT"
+                    can_upgrade = True
+                else:
+                    status = "COMPLETED"
+
+        return next_question, status, can_upgrade
+
+    @classmethod
+    async def _handle_reports(
+        cls,
+        *,
+        db: AsyncSession,
+        session: InterviewSession | None,
+        status: str,
+        role: str,
+        domain: str,
+        new_history: list[dict[str, Any]],
+        average_score: float,
+        total_questions: int,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """Generates reports according to the current session status and persists if completed."""
+        basic_report = None
+        if status == "UPGRADE_PROMPT":
+            basic_report = cls._generate_report_safe(
+                role=role,
+                domain=domain,
+                history=new_history,
+                report_type="basic",
+                average_score=average_score,
+                total_questions=total_questions,
+            )
+
+        final_report = None
+        if status == "COMPLETED":
+            final_report = cls._generate_report_safe(
+                role=role,
+                domain=domain,
+                history=new_history,
+                report_type="combined" if total_questions > 5 else "basic",
+                average_score=average_score,
+                total_questions=total_questions,
+            )
+            await cls._persist_final_report(db=db, session=session, final_report=final_report)
+
+        return basic_report, final_report

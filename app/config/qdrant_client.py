@@ -13,7 +13,7 @@ def get_qdrant() -> AsyncQdrantClient:
         raise RuntimeError("Qdrant client not initialized. Call init_qdrant() first.")
     return _client
 
-async def init_qdrant() -> AsyncQdrantClient:
+def init_qdrant() -> AsyncQdrantClient:
     """
     Initialize the Qdrant async client singleton.
     """

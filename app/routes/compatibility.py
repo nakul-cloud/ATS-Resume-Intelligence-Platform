@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -130,11 +131,19 @@ async def get_resume_status(
         if not resume_record:
             raise HTTPException(status_code=404, detail="Resume not found")
 
+        candidate_id = None
+        if resume_record.parse_status == "SUCCESS":
+            from app.models.candidate import Candidate
+            stmt_c = select(Candidate.id).where(Candidate.resume_id == resume_record.id).order_by(Candidate.id.desc())
+            c_res = await db.execute(stmt_c)
+            candidate_id = c_res.scalars().first()
+
         return {
             "status": "success",
             "data": {
                 "resume_id": resume_record.id,
                 "status": resume_record.parse_status,
+                "candidate_id": candidate_id,
                 "error_message": resume_record.parse_error_message
             }
         }
@@ -371,9 +380,7 @@ async def get_metrics_compat(db: AsyncSession = Depends(get_db)):
         top_skills = metrics["top_skills"]
         domain_dist = metrics["domain_distribution"]
 
-        # Calculate domain labels & values
-        domain_labels = list(domain_dist.keys())[:7]
-        domain_data = list(domain_dist.values())[:7]
+
 
         return {
             "key_metrics": {
@@ -422,6 +429,7 @@ async def get_candidate_compat(
     """
     Retrieves parsed candidate metadata by ID.
     """
+    import json
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -433,18 +441,34 @@ async def get_candidate_compat(
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
+    def safe_load_json(val: str | None) -> list | dict:
+        if not val:
+            return []
+        try:
+            return json.loads(val)
+        except Exception:
+            return []
+
     return {
         "status": "success",
         "candidate_id": candidate.id,
         "parsed_data": {
             "name": candidate.candidate_name,
+            "candidate_name": candidate.candidate_name,
             "email": candidate.email,
             "phone_number": candidate.phone_number,
             "role": candidate.primary_role_title,
+            "primary_role_title": candidate.primary_role_title,
             "domain": candidate.primary_domain,
+            "primary_domain": candidate.primary_domain,
             "experience": float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
+            "total_experience_years": float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
             "highest_education": candidate.highest_education,
             "summary_text": candidate.summary_text,
-            "skills": [s.skill_name for s in candidate.skills]
+            "skills": [s.skill_name for s in candidate.skills],
+            "work_experience": safe_load_json(candidate.work_experience_json),
+            "projects": safe_load_json(candidate.projects_json),
+            "accomplishments": safe_load_json(candidate.accomplishments_json),
+            "hobbies": safe_load_json(candidate.hobbies_json)
         }
     }

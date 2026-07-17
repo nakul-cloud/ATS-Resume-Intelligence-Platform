@@ -6,13 +6,20 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Enum, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.constants.db import (
+    CANDIDATE_ID_FK,
+    CASCADE_DELETE_ORPHAN,
+    EVALUATION_ID_FK,
+    LEN_FEEDBACK_TEXT,
+    ON_DELETE_CASCADE_SQL,
+)
+
 from .base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from .candidate import Candidate
     from .interview import InterviewSession
     from .project import RecommendedProject
-
 
 
 class DecisionBand(str, enum.Enum):
@@ -27,7 +34,7 @@ class Evaluation(Base, TimestampMixin):
     __tablename__ = "evaluations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    candidate_id: Mapped[int] = mapped_column(ForeignKey("candidates_parsed.id", ondelete="CASCADE"))
+    candidate_id: Mapped[int] = mapped_column(ForeignKey(CANDIDATE_ID_FK, ondelete=ON_DELETE_CASCADE_SQL))
 
     job_description_text: Mapped[str] = mapped_column(Text, nullable=False)
     match_score: Mapped[int] = mapped_column(Integer, nullable=False)  # 0-100
@@ -37,16 +44,16 @@ class Evaluation(Base, TimestampMixin):
 
     candidate: Mapped[Candidate] = relationship(back_populates="evaluations")
     strengths: Mapped[list[EvaluationStrength]] = relationship(
-        back_populates="evaluation", cascade="all, delete-orphan"
+        back_populates="evaluation", cascade=CASCADE_DELETE_ORPHAN
     )
     skill_gaps: Mapped[list[EvaluationSkillGap]] = relationship(
-        back_populates="evaluation", cascade="all, delete-orphan"
+        back_populates="evaluation", cascade=CASCADE_DELETE_ORPHAN
     )
     comparisons: Mapped[list[EvaluationComparison]] = relationship(
-        back_populates="evaluation", cascade="all, delete-orphan", order_by="EvaluationComparison.rank"
+        back_populates="evaluation", cascade=CASCADE_DELETE_ORPHAN, order_by="EvaluationComparison.rank"
     )
     recommended_projects: Mapped[list[RecommendedProject]] = relationship(
-        back_populates="evaluation", cascade="all, delete-orphan"
+        back_populates="evaluation", cascade=CASCADE_DELETE_ORPHAN
     )
     interview_sessions: Mapped[list[InterviewSession]] = relationship(back_populates="evaluation")
 
@@ -57,8 +64,8 @@ class EvaluationStrength(Base):
     __tablename__ = "evaluation_strengths"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
-    strength_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    evaluation_id: Mapped[int] = mapped_column(ForeignKey(EVALUATION_ID_FK, ondelete=ON_DELETE_CASCADE_SQL))
+    strength_text: Mapped[str] = mapped_column(String(LEN_FEEDBACK_TEXT), nullable=False)
 
     evaluation: Mapped[Evaluation] = relationship(back_populates="strengths")
 
@@ -69,8 +76,8 @@ class EvaluationSkillGap(Base):
     __tablename__ = "evaluation_skill_gaps"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
-    gap_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    evaluation_id: Mapped[int] = mapped_column(ForeignKey(EVALUATION_ID_FK, ondelete=ON_DELETE_CASCADE_SQL))
+    gap_text: Mapped[str] = mapped_column(String(LEN_FEEDBACK_TEXT), nullable=False)
 
     evaluation: Mapped[Evaluation] = relationship(back_populates="skill_gaps")
 
@@ -88,9 +95,9 @@ class EvaluationComparison(Base, TimestampMixin):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
+    evaluation_id: Mapped[int] = mapped_column(ForeignKey(EVALUATION_ID_FK, ondelete=ON_DELETE_CASCADE_SQL))
     compared_candidate_id: Mapped[int] = mapped_column(
-        ForeignKey("candidates_parsed.id", ondelete="CASCADE")
+        ForeignKey(CANDIDATE_ID_FK, ondelete=ON_DELETE_CASCADE_SQL)
     )
 
     similarity_score: Mapped[float] = mapped_column(Float, nullable=False)  # cosine similarity from Qdrant

@@ -94,9 +94,10 @@ qdrant_storage/
 # Alembic migration __pycache__ (auto-generated)
 app/migrations/__pycache__/
 
-# SonarQube analysis cache
+# SonarQube analysis cache and auth token config
 .sonar/
 .scannerwork/
+sonar-project.properties
 
 # Graphify knowledge graph output (auto-generated, large)
 graphify-out/
@@ -106,3 +107,9 @@ graphify-out/
 
 # ARQ worker task artifacts
 arq_job_results/
+
+
+# Sonar Cloud
+reports/
+scripts/sonar_report.py
+

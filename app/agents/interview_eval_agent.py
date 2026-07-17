@@ -2,6 +2,7 @@ import os
 from typing import Any
 
 from app.config.settings import settings
+from app.constants.general import DOMAIN_PLACEHOLDER, ROLE_PLACEHOLDER
 from app.exceptions.custom_exceptions import AIServiceError
 from app.providers.llm.factory import get_groq_client
 from app.utils.json_parser import extract_json
@@ -12,6 +13,7 @@ from app.utils.logger import logger
 # ---------------------------------------------------------------------------
 
 _PROMPT_CACHE: dict[str, str] | None = None
+
 
 def _load_prompts() -> dict[str, str]:
     """
@@ -28,53 +30,52 @@ def _load_prompts() -> dict[str, str]:
     try:
         with open(prompt_path, encoding="utf-8") as f:
             content = f.read()
+
+        sections = {}
+        current_section = None
+        current_lines = []
+
+        for line in content.splitlines():
+            if line.strip().startswith("[") and line.strip().endswith("]"):
+                if current_section:
+                    sections[current_section] = "\n".join(current_lines).strip()
+                current_section = line.strip()[1:-1]
+                current_lines = []
+            elif current_section is not None:
+                current_lines.append(line)
+
+        if current_section:
+            sections[current_section] = "\n".join(current_lines).strip()
+
+        _PROMPT_CACHE = sections
+        return sections
     except Exception as e:
-        logger.error(f"Failed to read interview prompts from {prompt_path}: {e}")
-        raise AIServiceError(f"Prompt load failed: {e}")
-
-    sections: dict[str, str] = {}
-    current_key = None
-    current_lines: list[str] = []
-
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            if current_key is not None:
-                sections[current_key] = "\n".join(current_lines).strip()
-            current_key = stripped[1:-1]  # e.g. "INITIAL_QUESTION_PROMPT"
-            current_lines = []
-        else:
-            current_lines.append(line)
-
-    if current_key is not None:
-        sections[current_key] = "\n".join(current_lines).strip()
-
-    _PROMPT_CACHE = sections
-    return sections
+        logger.error(f"Failed to load interview prompt file: {e}")
+        return {}
 
 
 def _get_tier_context(tier: str) -> str:
-    """Returns the tier-specific instruction block from the prompt file."""
+    """Helper to load standard instructions matching the evaluation tier."""
     prompts = _load_prompts()
-    tier_key = f"TIER_{tier}"
-    return prompts.get(tier_key, prompts.get("TIER_GAP_ANALYSIS", ""))
+    if tier == "BASIC":
+        return prompts.get("TIER_BASIC", "")
+    if tier == "GAP_ANALYSIS":
+        return prompts.get("TIER_GAP_ANALYSIS", "")
+    if tier == "ADVANCED":
+        return prompts.get("TIER_ADVANCED", "")
+    return ""
 
 
 def _get_advanced_round_message() -> str:
-    """Returns the advanced round instruction from the prompt file."""
-    prompts = _load_prompts()
-    return prompts.get("TIER_ADVANCED_ROUND", "Generate a highly difficult advanced question.")
+    """Gets instructions for advanced/follow-up technical rounds."""
+    return _load_prompts().get("ADVANCED_FOLLOW_UP_MESSAGE", "")
 
-
-# ---------------------------------------------------------------------------
-# Public agent functions
-# ---------------------------------------------------------------------------
 
 def generate_initial_question(
     role: str,
     domain: str,
     skills: str,
-    gaps: list[str],
+    gaps: list[str] | None,
     tier: str = "GAP_ANALYSIS",
 ) -> dict[str, Any]:
     """
@@ -92,8 +93,8 @@ def generate_initial_question(
 
     prompt = (
         template
-        .replace("{role}", str(role))
-        .replace("{domain}", str(domain))
+        .replace(ROLE_PLACEHOLDER, str(role))
+        .replace(DOMAIN_PLACEHOLDER, str(domain))
         .replace("{skills}", str(skills))
         .replace("{gaps}", ", ".join(gaps) if gaps else "None specified")
         .replace("{tier_context}", tier_context)
@@ -136,22 +137,8 @@ def generate_next_stateless_question(
     domain = candidate_profile.get("primary_domain") or "General Tech"
     skills = candidate_profile.get("skills_text") or ""
 
-    # Build history string AND extract already-covered topics for diversity enforcement
-    history_str = ""
-    covered_topics: list[str] = []
-    for idx, item in enumerate(history):
-        history_str += (
-            f"Question {idx+1}: {item.get('question_text')}\n"
-            f"Answer {idx+1}: {item.get('answer_text')}\n"
-            f"Score: {item.get('answer_score')}/100\n"
-            f"Feedback: {item.get('feedback')}\n\n"
-        )
-        # Collect topic if available, otherwise fall back to question snippet
-        topic = item.get("topic") or item.get("question_text", "")[:60]
-        if topic:
-            covered_topics.append(topic)
-
-    covered_topics_str = ", ".join(covered_topics) if covered_topics else "None yet"
+    # Format history string and extract already-covered topics for diversity enforcement
+    history_str, covered_topics_str = _format_interview_history(history)
 
     # Pick the round-specific instruction from the prompt file
     if is_advanced:
@@ -164,8 +151,8 @@ def generate_next_stateless_question(
 
     prompt = (
         template
-        .replace("{role}", str(role))
-        .replace("{domain}", str(domain))
+        .replace(ROLE_PLACEHOLDER, str(role))
+        .replace(DOMAIN_PLACEHOLDER, str(domain))
         .replace("{jd_text}", str(jd_text or "N/A"))
         .replace("{skills}", str(skills))
         .replace("{gaps}", ", ".join(gaps) if gaps else "None specified")
@@ -214,8 +201,8 @@ def evaluate_interview_answer(
     template = prompts.get("EVALUATION_PROMPT", "")
     prompt = (
         template
-        .replace("{role}", str(role))
-        .replace("{domain}", str(domain))
+        .replace(ROLE_PLACEHOLDER, str(role))
+        .replace(DOMAIN_PLACEHOLDER, str(domain))
         .replace("{question_text}", str(question_text))
         .replace("{candidate_answer}", str(candidate_answer))
         .replace("{current_difficulty}", str(current_difficulty))
@@ -306,3 +293,24 @@ Provide specific, constructive technical details. Do not use generic placeholder
             "strengths": list(set(all_strengths))[:5],
             "suggestions": list(set(all_weaknesses))[:5],
         }
+
+
+# --- PRIVATE MODULARIZATION HELPERS ---
+
+def _format_interview_history(history: list[dict[str, Any]]) -> tuple[str, str]:
+    """Formats mock interview history list into a readable string and covered topics list."""
+    history_str = ""
+    covered_topics: list[str] = []
+    for idx, item in enumerate(history):
+        history_str += (
+            f"Question {idx+1}: {item.get('question_text')}\n"
+            f"Answer {idx+1}: {item.get('answer_text')}\n"
+            f"Score: {item.get('answer_score')}/100\n"
+            f"Feedback: {item.get('feedback')}\n\n"
+        )
+        topic = item.get("topic") or item.get("question_text", "")[:60]
+        if topic:
+            covered_topics.append(topic)
+
+    covered_topics_str = ", ".join(covered_topics) if covered_topics else "None yet"
+    return history_str, covered_topics_str

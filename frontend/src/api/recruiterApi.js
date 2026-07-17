@@ -17,6 +17,16 @@ export const recruiterApi = {
     return response.data;
   },
 
+  getResumeStatus: async (resumeId) => {
+    const response = await api.get(`/v1/resume/status/${resumeId}`);
+    return response.data;
+  },
+
+  getCandidate: async (candidateId) => {
+    const response = await api.get(`/candidate/${candidateId}`);
+    return response.data;
+  },
+
   normalizeJD: async (jdText) => {
     const response = await api.post('/jd/rewrite', { jd_text: jdText });
     return response.data;

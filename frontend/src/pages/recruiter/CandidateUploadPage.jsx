@@ -33,7 +33,7 @@ export const CandidateUploadPage = () => {
     e.preventDefault();
     setIsDragOver(false);
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type === 'application/pdf') {
+    if (droppedFile?.type === 'application/pdf') {
       setFile(droppedFile);
     } else {
       triggerToast('Only PDF files are supported.', 'warning');
@@ -42,7 +42,7 @@ export const CandidateUploadPage = () => {
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
+    if (selectedFile?.type === 'application/pdf') {
       setFile(selectedFile);
     } else {
       triggerToast('Only PDF files are supported.', 'warning');
@@ -59,19 +59,156 @@ export const CandidateUploadPage = () => {
     setParsedProfile(null);
     try {
       const response = await recruiterApi.uploadResume(file);
-      // Backend success_response wrapper returns { success: true, message: "...", data: { status: "success", parsed_data: ... } }
       if (response.success && response.data) {
-        setParsedProfile(response.data.parsed_data);
-        triggerToast('Resume parsed and indexed successfully!', 'success');
+        const resumeId = response.data.resume_id;
+
+        if (response.data.status === "PENDING" && resumeId) {
+          let attempts = 0;
+          const maxAttempts = 30; // Poll for max 30 seconds
+
+          const pollInterval = setInterval(async () => {
+            attempts += 1;
+            try {
+              const statusResponse = await recruiterApi.getResumeStatus(resumeId);
+              if (statusResponse.status === "success" && statusResponse.data) {
+                const parseStatus = statusResponse.data.status;
+                const candidateId = statusResponse.data.candidate_id;
+
+                if (parseStatus === "SUCCESS" && candidateId) {
+                  clearInterval(pollInterval);
+                  const candidateResponse = await recruiterApi.getCandidate(candidateId);
+                  if (candidateResponse.status === "success" && candidateResponse.parsed_data) {
+                    setParsedProfile(candidateResponse.parsed_data);
+                    triggerToast('Resume parsed and indexed successfully!', 'success');
+                  } else {
+                    triggerToast('Failed to fetch parsed candidate details.', 'error');
+                  }
+                  setIsLoading(false);
+                } else if (parseStatus === "FAILED") {
+                  clearInterval(pollInterval);
+                  triggerToast(statusResponse.data.error_message || 'Resume parsing failed on worker.', 'error');
+                  setIsLoading(false);
+                }
+              }
+            } catch (pollErr) {
+              console.error("Polling error:", pollErr);
+            }
+
+            if (attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              triggerToast('Parsing timeout. Please check dashboard status later.', 'warning');
+              setIsLoading(false);
+            }
+          }, 1000);
+
+        } else if (response.data.parsed_data) {
+          setParsedProfile(response.data.parsed_data);
+          triggerToast('Resume parsed and indexed successfully!', 'success');
+          setIsLoading(false);
+        } else {
+          triggerToast('Uploaded, but status is unknown.', 'warning');
+          setIsLoading(false);
+        }
       } else {
-        triggerToast(response.message || 'Failed to parse resume.', 'error');
+        triggerToast(response.message || 'Failed to upload resume.', 'error');
+        setIsLoading(false);
       }
     } catch (err) {
       console.error(err);
       triggerToast('Failed to process resume parsing.', 'error');
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  const renderRightColumn = () => {
+    if (isLoading) {
+      return (
+        <Card variant="raised" className="h-full flex items-center justify-center p-xl min-h-[300px]">
+          <LoadingSpinner size="lg" />
+        </Card>
+      );
+    }
+
+    if (parsedProfile) {
+      return (
+        <div className="space-y-md animate-fade-in">
+          <h3 className="text-lg font-bold text-primary font-h3">
+            Successfully Parsed Candidate Details
+          </h3>
+          
+          <Card variant="raised" className="space-y-md border border-outline-variant/30">
+            <div className="flex justify-between items-start border-b border-outline-variant/50 pb-sm">
+              <div>
+                <h4 className="font-bold text-on-surface text-lg">{parsedProfile.candidate_name || parsedProfile.name}</h4>
+                <p className="text-xs text-on-surface-variant mt-xs">
+                  {parsedProfile.primary_role_title || parsedProfile.role || 'Software Developer'} • {parsedProfile.total_experience_years || parsedProfile.experience || 0.0} Years Experience
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-xs">
+                <span className="text-[10px] uppercase tracking-wider text-outline bg-surface-container-high px-2.5 py-1 rounded font-bold font-mono">
+                  SUCCESS
+                </span>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowDetailModal(true)} 
+                  className="text-xs px-2.5 py-1 mt-xs"
+                  icon="visibility"
+                >
+                  See More Details
+                </Button>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm text-xs text-on-surface-variant font-medium">
+              <div className="flex items-center gap-xs">
+                <span className="material-symbols-outlined text-sm">mail</span>
+                {parsedProfile.email || 'N/A'}
+              </div>
+              <div className="flex items-center gap-xs">
+                <span className="material-symbols-outlined text-sm">call</span>
+                {parsedProfile.phone_number || 'N/A'}
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="space-y-xs pt-xs">
+              <h5 className="font-bold text-on-surface text-sm">Professional Summary</h5>
+              <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3">
+                {parsedProfile.summary_text || 'No summary details parsed.'}
+              </p>
+            </div>
+
+            {/* Technical Skills */}
+            <div className="space-y-xs pt-xs">
+              <h5 className="font-bold text-on-surface text-sm">Technical Skills</h5>
+              <div className="flex flex-wrap gap-xs">
+                {parsedProfile.skills?.slice(0, 8).map((skill, index) => {
+                  const skillName = typeof skill === 'string' ? skill : (skill.skill_name || '');
+                  const skillKey = skillName || index;
+                  return <SkillPill key={skillKey} skill={skillName} />;
+                })}
+                {parsedProfile.skills && parsedProfile.skills.length > 8 && (
+                  <span className="text-xs text-outline font-semibold self-center ml-xs">
+                    +{parsedProfile.skills.length - 8} more
+                  </span>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <Card variant="raised" className="h-full flex flex-col items-center justify-center text-center p-xl opacity-60 min-h-[300px]">
+        <span className="material-symbols-outlined text-6xl text-outline mb-md">upload_file</span>
+        <h3 className="font-h3 text-on-surface font-semibold mb-xs">No Candidate Loaded</h3>
+        <p className="text-sm text-outline max-w-[320px]">
+          Upload and parse candidate resume files to index them in the database for recruiter matchmaking.
+        </p>
+      </Card>
+    );
   };
 
   return (
@@ -82,7 +219,7 @@ export const CandidateUploadPage = () => {
           <Card variant="raised" className="space-y-md">
             <h3 className="font-h3 text-primary font-semibold flex items-center gap-xs">
               <span className="material-symbols-outlined text-primary text-2xl">upload_file</span>
-              Upload Resume
+              {' '}Upload Resume
             </h3>
             
             <div 
@@ -132,84 +269,7 @@ export const CandidateUploadPage = () => {
 
         {/* Right Column: Parsed Results display */}
         <div className="lg:col-span-7 space-y-md">
-          {isLoading ? (
-            <Card variant="raised" className="h-full flex items-center justify-center p-xl min-h-[300px]">
-              <LoadingSpinner size="lg" />
-            </Card>
-          ) : parsedProfile ? (
-            <div className="space-y-md animate-fade-in">
-              <h3 className="text-lg font-bold text-primary font-h3">
-                Successfully Parsed Candidate Details
-              </h3>
-              
-              <Card variant="raised" className="space-y-md border border-outline-variant/30">
-                <div className="flex justify-between items-start border-b border-outline-variant/50 pb-sm">
-                  <div>
-                    <h4 className="font-bold text-on-surface text-lg">{parsedProfile.candidate_name || parsedProfile.name}</h4>
-                    <p className="text-xs text-on-surface-variant mt-xs">
-                      {parsedProfile.primary_role_title || parsedProfile.role || 'Software Developer'} • {parsedProfile.total_experience_years || parsedProfile.experience || 0.0} Years Experience
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-xs">
-                    <span className="text-[10px] uppercase tracking-wider text-outline bg-surface-container-high px-2.5 py-1 rounded font-bold font-mono">
-                      SUCCESS
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => setShowDetailModal(true)} 
-                      className="text-xs px-2.5 py-1 mt-xs"
-                      icon="visibility"
-                    >
-                      See More Details
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Contact Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-sm text-xs text-on-surface-variant font-medium">
-                  <div className="flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-sm">mail</span>
-                    {parsedProfile.email || 'N/A'}
-                  </div>
-                  <div className="flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-sm">call</span>
-                    {parsedProfile.phone_number || 'N/A'}
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div className="space-y-xs pt-xs">
-                  <h5 className="font-bold text-on-surface text-sm">Professional Summary</h5>
-                  <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3">
-                    {parsedProfile.summary_text || 'No summary details parsed.'}
-                  </p>
-                </div>
-
-                {/* Technical Skills */}
-                <div className="space-y-xs pt-xs">
-                  <h5 className="font-bold text-on-surface text-sm">Technical Skills</h5>
-                  <div className="flex flex-wrap gap-xs">
-                    {parsedProfile.skills && parsedProfile.skills.slice(0, 8).map((skill, index) => (
-                      <SkillPill key={index} skill={typeof skill === 'string' ? skill : (skill.skill_name || '')} />
-                    ))}
-                    {parsedProfile.skills && parsedProfile.skills.length > 8 && (
-                      <span className="text-xs text-outline font-semibold self-center ml-xs">
-                        +{parsedProfile.skills.length - 8} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ) : (
-            <Card variant="raised" className="h-full flex flex-col items-center justify-center text-center p-xl opacity-60 min-h-[300px]">
-              <span className="material-symbols-outlined text-6xl text-outline mb-md">upload_file</span>
-              <h3 className="font-h3 text-on-surface font-semibold mb-xs">No Candidate Loaded</h3>
-              <p className="text-sm text-outline max-w-[320px]">
-                Upload and parse candidate resume files to index them in the database for recruiter matchmaking.
-              </p>
-            </Card>
-          )}
+          {renderRightColumn()}
         </div>
       </div>
 
@@ -226,7 +286,7 @@ export const CandidateUploadPage = () => {
 
             <h3 className="font-h3 text-primary font-semibold border-b border-outline-variant pb-xs flex items-center gap-xs">
               <span className="material-symbols-outlined text-primary text-2xl">account_circle</span>
-              Candidate Sourcing Profile Details
+              {' '}Candidate Sourcing Profile Details
             </h3>
 
             {/* Header info grid */}
@@ -265,9 +325,11 @@ export const CandidateUploadPage = () => {
             <div className="space-y-xs">
               <span className="text-[10px] uppercase tracking-wider text-outline block font-label-caps">Skills Overview</span>
               <div className="flex flex-wrap gap-xs bg-surface-container-low p-md rounded-2xl border border-outline-variant/30">
-                {parsedProfile.skills && parsedProfile.skills.map((skill, index) => (
-                  <SkillPill key={index} skill={typeof skill === 'string' ? skill : (skill.skill_name || '')} />
-                ))}
+                {parsedProfile.skills?.map((skill, index) => {
+                  const skillName = typeof skill === 'string' ? skill : (skill.skill_name || '');
+                  const skillKey = skillName || index;
+                  return <SkillPill key={skillKey} skill={skillName} />;
+                })}
               </div>
             </div>
 
@@ -276,28 +338,34 @@ export const CandidateUploadPage = () => {
               <div className="space-y-sm">
                 <span className="text-[10px] uppercase tracking-wider text-outline block font-label-caps">Work History</span>
                 <div className="space-y-sm">
-                  {parsedProfile.work_experience.map((work, idx) => (
-                    <div key={idx} className="bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h6 className="font-semibold text-on-surface text-xs">{work.role || 'Job Title'}</h6>
-                          <p className="text-[10px] text-secondary font-medium">{work.company || 'Company'}</p>
+                  {parsedProfile.work_experience.map((work, idx) => {
+                    const workKey = work.company ? `${work.company}-${work.role}-${idx}` : idx;
+                    return (
+                      <div key={workKey} className="bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h6 className="font-semibold text-on-surface text-xs">{work.role || 'Job Title'}</h6>
+                            <p className="text-[10px] text-secondary font-medium">{work.company || 'Company'}</p>
+                          </div>
+                          <span className="text-[10px] bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded border border-outline-variant">
+                            {work.duration || 'N/A'}
+                          </span>
                         </div>
-                        <span className="text-[10px] bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded border border-outline-variant">
-                          {work.duration || 'N/A'}
-                        </span>
+                        {work.bullets && work.bullets.length > 0 && (
+                          <ul className="list-disc pl-5 mt-xs space-y-xs">
+                            {work.bullets.map((bullet, bIdx) => {
+                              const bulletKey = `${bullet.substring(0, 15)}-${bIdx}`;
+                              return (
+                                <li key={bulletKey} className="text-[11px] text-on-surface-variant leading-relaxed">
+                                  {bullet}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
                       </div>
-                      {work.bullets && work.bullets.length > 0 && (
-                        <ul className="list-disc pl-5 mt-xs space-y-xs">
-                          {work.bullets.map((bullet, bIdx) => (
-                            <li key={bIdx} className="text-[11px] text-on-surface-variant leading-relaxed">
-                              {bullet}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -307,21 +375,24 @@ export const CandidateUploadPage = () => {
               <div className="space-y-sm">
                 <span className="text-[10px] uppercase tracking-wider text-outline block font-label-caps">Key Projects</span>
                 <div className="space-y-sm">
-                  {parsedProfile.projects.map((proj, idx) => (
-                    <div key={idx} className="bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30">
-                      <h6 className="font-semibold text-on-surface text-xs">{proj.title || 'Project Name'}</h6>
-                      <p className="text-[11px] text-on-surface-variant mt-xs leading-relaxed">{proj.description}</p>
-                      {proj.technologies_used && proj.technologies_used.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-sm">
-                          {proj.technologies_used.map((tech, tIdx) => (
-                            <span key={tIdx} className="text-[9px] font-bold bg-[#E0F2E9] text-green-950 border border-[#A5D6A7] px-2 py-0.5 rounded-full">
-                              {tech}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {parsedProfile.projects.map((proj, idx) => {
+                    const projKey = proj.title ? `${proj.title}-${idx}` : idx;
+                    return (
+                      <div key={projKey} className="bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30">
+                        <h6 className="font-semibold text-on-surface text-xs">{proj.title || 'Project Name'}</h6>
+                        <p className="text-[11px] text-on-surface-variant mt-xs leading-relaxed">{proj.description}</p>
+                        {proj.technologies_used && proj.technologies_used.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-sm">
+                            {proj.technologies_used.map((tech) => (
+                              <span key={tech} className="text-[9px] font-bold bg-[#E0F2E9] text-green-950 border border-[#A5D6A7] px-2 py-0.5 rounded-full">
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -333,9 +404,10 @@ export const CandidateUploadPage = () => {
                 <span className="text-[10px] uppercase tracking-wider text-outline block font-label-caps">Accomplishments</span>
                 {parsedProfile.accomplishments && parsedProfile.accomplishments.length > 0 ? (
                   <ul className="list-disc pl-5 text-xs text-on-surface-variant space-y-xs bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30 min-h-[100px]">
-                    {parsedProfile.accomplishments.map((acc, idx) => (
-                      <li key={idx} className="leading-relaxed">{acc}</li>
-                    ))}
+                    {parsedProfile.accomplishments.map((acc, idx) => {
+                      const accKey = `${acc.substring(0, 15)}-${idx}`;
+                      return <li key={accKey} className="leading-relaxed">{acc}</li>;
+                    })}
                   </ul>
                 ) : (
                   <p className="text-xs text-outline italic bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30 text-center min-h-[100px] flex items-center justify-center">No accomplishments parsed.</p>
@@ -347,8 +419,8 @@ export const CandidateUploadPage = () => {
                 <span className="text-[10px] uppercase tracking-wider text-outline block font-label-caps">Hobbies & Interests</span>
                 {parsedProfile.hobbies && parsedProfile.hobbies.length > 0 ? (
                   <div className="flex flex-wrap gap-xs bg-surface-container-low p-sm rounded-2xl border border-outline-variant/30 min-h-[100px] items-start content-start">
-                    {parsedProfile.hobbies.map((hobby, idx) => (
-                      <span key={idx} className="bg-surface-container-high text-on-surface-variant text-[10px] px-2.5 py-0.5 rounded-full border border-outline-variant">
+                    {parsedProfile.hobbies.map((hobby) => (
+                      <span key={hobby} className="bg-surface-container-high text-on-surface-variant text-[10px] px-2.5 py-0.5 rounded-full border border-outline-variant">
                         {hobby}
                       </span>
                     ))}

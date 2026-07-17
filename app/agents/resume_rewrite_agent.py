@@ -11,7 +11,6 @@ from app.utils.logger import logger
 def optimize_resume_bullets(
     candidate_name: str,
     experience_years: float,
-    summary: str,
     skills: list[str],
     projects: list[dict],
     jd_text: str,

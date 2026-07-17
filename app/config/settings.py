@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     mail_username: str | None = None
     mail_password: str | None = None
     mail_from_email: str = "noreply@resumeintelligence.com"
+    mail_admin_email: str = "admin@resumeintelligence.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",
