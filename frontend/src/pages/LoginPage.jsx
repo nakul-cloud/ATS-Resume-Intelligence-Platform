@@ -161,11 +161,6 @@ export const LoginPage = () => {
             </form>
           )}
         </Card>
-
-        {/* Footer info */}
-        <p className="text-center text-[10px] text-outline uppercase tracking-widest font-semibold">
-          Mock Recruiter Creds: recruiter@example.com / password123
-        </p>
       </div>
 
       {toastMessage && (

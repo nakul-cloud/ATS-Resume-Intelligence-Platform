@@ -39,6 +39,10 @@ lint:
     uv run ruff check .
     uv run ruff format --check .
 
+# Shortcut to start all infrastructure containers : just docker
+docker:
+    docker-compose up -d
+
 # Start the infrastructure containers (Postgres, Qdrant, Redis, Adminer) : just docker-up
 docker-up:
     docker-compose up -d
