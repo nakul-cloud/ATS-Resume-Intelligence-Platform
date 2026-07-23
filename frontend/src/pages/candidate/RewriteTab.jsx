@@ -243,7 +243,7 @@ export const RewriteTab = () => {
           {/* Cards List */}
           <div className="space-y-md">
             {(rewriteResults.optimized_bullets || []).map((bullet, index) => (
-              <Card key={index} variant="raised" className="overflow-hidden p-0 border border-outline-variant/30">
+              <Card key={bullet.original.substring(0, 30) || index} variant="raised" className="overflow-hidden p-0 border border-outline-variant/30">
                 <div className="grid grid-cols-1 md:grid-cols-2">
                   {/* Left Column: Original */}
                   <div className="p-lg border-b md:border-b-0 md:border-r border-outline-variant/30 flex flex-col justify-between">

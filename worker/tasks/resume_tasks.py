@@ -41,7 +41,7 @@ async def _send_worker_alert(resume_id: int, filename: str, status: str, error_m
             doc_id=str(resume_id),
             filename=filename,
             status=status,
-            to_email=settings.mail_admin_email,
+            to_email=getattr(settings, "mail_admin_email", "admin@resumeintelligence.com"),
             error_message=error_message
         )
     except Exception as email_err:

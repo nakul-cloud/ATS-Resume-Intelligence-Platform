@@ -1,14 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
-import secure
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from langchain_core.globals import set_debug
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -26,22 +26,18 @@ from app.exceptions.handlers import (
     http_exception_handler,
     validation_exception_handler,
 )
+from app.middleware.request_logging import RequestLoggingMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.routes.compatibility import router as compat_router
 from app.routes.v1.router import router as v1_router
 from app.services.ai.vector_store import VectorStore
 from app.utils.logger import logger
 
-# Enable verbose LangChain terminal logs globally
-set_debug(True)
-
-# Initialize the secure package (Helmet equivalent)
-secure_headers = secure.Secure()
+# Enable verbose LangChain terminal logs dynamically
+set_debug(settings.env == "development")
 
 # Configure Redis connection settings for ARQ
-redis_settings = RedisSettings(
-    host=settings.redis_host,
-    port=settings.redis_port
-)
+redis_settings = RedisSettings(host=settings.redis_host, port=settings.redis_port)
 
 
 @asynccontextmanager
@@ -50,7 +46,23 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup and shutdown events.
     This replaces the deprecated @app.on_event("startup")
     """
-    logger.info(f"Starting {settings.app_name} in {settings.env} mode...")
+    # Log credentials-safe active environment settings card on startup
+    db_display = (
+        settings.database_url.split("@")[-1]
+        if "@" in settings.database_url
+        else "configured"
+    )
+    logger.info(
+        f"\n"
+        f"  ==================================================\n"
+        f"  🚀 Starting {settings.app_name}\n"
+        f"  ├──  Environment  : {settings.env}\n"
+        f"  ├──  Database URL  : {db_display}\n"
+        f"  ├──  Qdrant URL   : {settings.qdrant_url}\n"
+        f"  ├──  Redis Host   : {settings.redis_host}:{settings.redis_port}\n"
+        f"  └──  Docs Status  : {'http://localhost:8001/docs' if settings.env == 'development' else 'disabled'}\n"
+        f"  =================================================="
+    )
 
     # Check Database connection on startup
     try:
@@ -113,30 +125,38 @@ app = FastAPI(
 # Wire up the rate limiter
 app.state.limiter = limiter
 
+# Constant for the frontend entry-point filename (avoids duplicated literal — S1192)
+_INDEX_HTML = "index.html"
+
 # MIDDLEWARES
+# Note: Starlette processes add_middleware() in LIFO order, so the middleware
+# added LAST here will run FIRST on every request.  CORS must be outermost
+# (i.e., run first) so pre-flight OPTIONS requests are handled before any
+# other middleware touches them (S8414).
 app.add_middleware(SlowAPIMiddleware)
 
-# 1. CORS Middleware
+# 4. GZip Compression Middleware
+# Compresses responses larger than 1000 bytes
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# 3. Security Headers Middleware (sets secure headers)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Request Logging Middleware (logs request method, path, status, and latency)
+app.add_middleware(RequestLoggingMiddleware)
+
+# 1. CORS Middleware — added last so it is outermost (runs first)
+allowed_origins_list = [
+    o.strip() for o in settings.allowed_origins.split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
-
-# 2. GZip Compression Middleware
-# Compresses responses larger than 1000 bytes
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-
-# 3. Security Headers Middleware
-@app.middleware("http")
-async def set_secure_headers(request: Request, call_next):
-    """Applies security headers to every response"""
-    response = await call_next(request)
-    secure_headers.set_headers(response)
-    return response
 
 
 # EXCEPTION HANDLERS
@@ -151,9 +171,24 @@ app.include_router(v1_router, prefix="/api/v1")
 app.include_router(compat_router)
 
 
+# Serve static assets from frontend build if available
+frontend_dist_path = "frontend/dist"
+if os.path.exists(frontend_dist_path):
+    app.mount(
+        "/assets",
+        StaticFiles(directory=f"{frontend_dist_path}/assets"),
+        name="static_assets",
+    )
+
+
 @app.get("/")
 async def root():
     """Serves the frontend index.html if present, otherwise returns health check."""
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
+    # Check production build directory first
+    prod_index = os.path.join(frontend_dist_path, _INDEX_HTML)
+    if os.path.exists(prod_index):
+        return FileResponse(prod_index)
+
+    if os.path.exists(_INDEX_HTML):
+        return FileResponse(_INDEX_HTML)
     return {"status": "healthy", "service": settings.app_name}

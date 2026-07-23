@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { recruiterApi } from '../../api/recruiterApi';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -14,6 +14,16 @@ export const CandidateUploadPage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('success');
+
+  const pollIntervalRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const triggerToast = (msg, type = 'success') => {
     setToastMessage(msg);
@@ -66,7 +76,7 @@ export const CandidateUploadPage = () => {
           let attempts = 0;
           const maxAttempts = 30; // Poll for max 30 seconds
 
-          const pollInterval = setInterval(async () => {
+          pollIntervalRef.current = setInterval(async () => {
             attempts += 1;
             try {
               const statusResponse = await recruiterApi.getResumeStatus(resumeId);
@@ -75,7 +85,8 @@ export const CandidateUploadPage = () => {
                 const candidateId = statusResponse.data.candidate_id;
 
                 if (parseStatus === "SUCCESS" && candidateId) {
-                  clearInterval(pollInterval);
+                  clearInterval(pollIntervalRef.current);
+                  pollIntervalRef.current = null;
                   const candidateResponse = await recruiterApi.getCandidate(candidateId);
                   if (candidateResponse.status === "success" && candidateResponse.parsed_data) {
                     setParsedProfile(candidateResponse.parsed_data);
@@ -85,7 +96,8 @@ export const CandidateUploadPage = () => {
                   }
                   setIsLoading(false);
                 } else if (parseStatus === "FAILED") {
-                  clearInterval(pollInterval);
+                  clearInterval(pollIntervalRef.current);
+                  pollIntervalRef.current = null;
                   triggerToast(statusResponse.data.error_message || 'Resume parsing failed on worker.', 'error');
                   setIsLoading(false);
                 }
@@ -95,7 +107,8 @@ export const CandidateUploadPage = () => {
             }
 
             if (attempts >= maxAttempts) {
-              clearInterval(pollInterval);
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
               triggerToast('Parsing timeout. Please check dashboard status later.', 'warning');
               setIsLoading(false);
             }

@@ -10,7 +10,7 @@ export const useCandidateStore = create((set) => ({
   setParsedProfile: (profile, id = null) => {
     set({ 
       parsedProfile: profile, 
-      candidateId: (id === 0 ? null : id) 
+      candidateId: id 
     });
   },
 

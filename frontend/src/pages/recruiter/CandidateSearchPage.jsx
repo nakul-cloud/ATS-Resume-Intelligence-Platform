@@ -148,7 +148,7 @@ export const CandidateSearchPage = () => {
               </h3>
               {candidates.map((candidate, idx) => (
                 <Card 
-                  key={idx} 
+                  key={candidate.candidate_id || idx} 
                   variant="raised" 
                   className="flex items-center justify-between p-md border border-outline-variant/30 hover:translate-y-[-2px] transition-all duration-200"
                 >

@@ -113,8 +113,10 @@ arq_job_results/
 reports/
 scripts/sonar_report.py
 
-# Local planning and data dumps
+# Local planning, CSV audit reports, and data dumps
 Implementation_plan/
+sonar_issues_report.csv
+*.csv
 candidate_skills.json
 candidates_parsed.json
 resumes_raw.json

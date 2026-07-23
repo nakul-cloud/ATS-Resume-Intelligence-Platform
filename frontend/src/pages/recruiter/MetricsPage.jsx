@@ -3,11 +3,12 @@ import { recruiterApi } from '../../api/recruiterApi';
 import { Card } from '../../components/common/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Toast } from '../../components/common/Toast';
+import { useToast } from '../../hooks/useToast';
 
 export const MetricsPage = () => {
   const [metrics, setMetrics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [toastMessage, setToastMessage] = useState(null);
+  const { toastMessage, toastType, triggerToast, clearToast } = useToast();
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -17,7 +18,7 @@ export const MetricsPage = () => {
         setMetrics(response);
       } catch (err) {
         console.error(err);
-        setToastMessage('Failed to fetch dashboard metrics.');
+        triggerToast('Failed to fetch dashboard metrics.', 'error');
       } finally {
         setIsLoading(false);
       }
@@ -112,8 +113,8 @@ export const MetricsPage = () => {
       {toastMessage && (
         <Toast 
           message={toastMessage} 
-          type="error" 
-          onClose={() => setToastMessage(null)} 
+          type={toastType} 
+          onClose={clearToast} 
         />
       )}
     </div>

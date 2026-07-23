@@ -23,13 +23,24 @@ export const authApi = {
     params.append('username', username);
     params.append('password', password);
 
-    const response = await axios.post('/api/auth/token', params, {
+    const response = await api.post('/auth/token', params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
     return response.data;
   }
+};
+
+export const extractErrorMessage = (err, fallback = 'An unexpected error occurred.') => {
+  if (!err) return fallback;
+  if (err.response?.data) {
+    const data = err.response.data;
+    if (typeof data.detail === 'string') return data.detail;
+    if (typeof data.message === 'string') return data.message;
+    if (typeof data.error === 'string') return data.error;
+  }
+  return err.message || fallback;
 };
 
 export default api;

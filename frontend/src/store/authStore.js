@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 
+const getInitialUser = () => {
+  try {
+    const userStr = localStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (e) {
+    console.error("Failed to parse auth_user from localStorage, removing item.", e);
+    localStorage.removeItem('auth_user');
+    return null;
+  }
+};
+
 export const useAuthStore = create((set) => ({
-  user: localStorage.getItem('auth_user') ? JSON.parse(localStorage.getItem('auth_user')) : null,
+  user: getInitialUser(),
   token: localStorage.getItem('auth_token') || null,
   role: localStorage.getItem('auth_role') || null, // 'candidate' or 'recruiter'
   

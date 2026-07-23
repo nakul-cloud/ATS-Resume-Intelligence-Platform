@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { authApi } from '../api/authApi';
+import { authApi, extractErrorMessage } from '../api/authApi';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { InputField } from '../components/common/InputField';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Toast } from '../components/common/Toast';
+import { useToast } from '../hooks/useToast';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -16,13 +17,7 @@ export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
-  const [toastType, setToastType] = useState('success');
-
-  const triggerToast = (msg, type = 'success') => {
-    setToastMessage(msg);
-    setToastType(type);
-  };
+  const { toastMessage, toastType, triggerToast, clearToast } = useToast();
 
   const handleCandidateEntry = () => {
     loginStore({ name: 'Candidate User' }, 'candidate-temp-token', 'candidate');
@@ -50,7 +45,7 @@ export const LoginPage = () => {
       }
     } catch (err) {
       console.error(err);
-      triggerToast(err.response?.data?.message || 'Invalid recruiter email or password.', 'error');
+      triggerToast(extractErrorMessage(err, 'Invalid recruiter email or password.'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +162,7 @@ export const LoginPage = () => {
         <Toast 
           message={toastMessage} 
           type={toastType} 
-          onClose={() => setToastMessage(null)} 
+          onClose={clearToast} 
         />
       )}
     </div>

@@ -126,7 +126,7 @@ export const ProjectsTab = () => {
               const diffStyles = getDifficultyStyles(project.difficulty_level);
               return (
                 <Card 
-                  key={index} 
+                  key={project.project_title || index} 
                   variant="raised" 
                   className={`p-lg flex flex-col md:flex-row gap-lg transition-all duration-300 group hover:shadow-xl ${diffStyles.borderClass}`}
                 >
