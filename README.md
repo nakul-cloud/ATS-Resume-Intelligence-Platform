@@ -464,7 +464,7 @@ An asynchronous HTML email alert is sent after every background worker task comp
 
 ---
 
-## 🛡️ Production Middleware Stack
+## 🛡️ Production Middleware Stack & Execution Order
 
 The `app/main.py` lifespan startup validates infrastructure before accepting any traffic:
 
@@ -477,14 +477,16 @@ Startup Sequence
 └── 4. Global Redis pool initialization (ARQ)
 ```
 
-Middlewares applied to every request (in order):
+### Execution Order (Starlette LIFO Stack)
+Starlette processes `app.add_middleware()` in **Last-In, First-Out (LIFO)** order. The middleware added **last** in source code wraps all previous layers and runs **first** on incoming requests:
 
-| Middleware | Library | Purpose |
-|---|---|---|
-| **Rate Limiting** | SlowAPI | Per-IP request rate limiting backed by Redis |
-| **CORS** | FastAPI CORSMiddleware | Cross-origin resource sharing headers |
-| **GZip Compression** | Starlette GZipMiddleware | Compresses responses > 1000 bytes |
-| **Security Headers** | `secure` (Helmet equivalent) | CSP, HSTS, X-Frame-Options, etc. |
+| Middleware Layer | Added Position | Execution Order | Purpose & Impact |
+|---|---|---|---|
+| **CORS Middleware** | Added 5th (Last) | **1st (Outermost)** | Handles pre-flight `OPTIONS` calls before any inner layer processes the request (SonarQube `S8414` compliant) |
+| **Request Logging** | Added 4th | **2nd** | Logs HTTP method, path, status code, and latency for incoming calls |
+| **Security Headers** | Added 3rd | **3rd** | Injects secure headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) |
+| **GZip Compression** | Added 2nd | **4th** | Compresses response payloads exceeding 1000 bytes |
+| **Rate Limiting** | Added 1st (First) | **5th (Innermost)** | Redis-backed per-IP rate limiting via SlowAPI |
 
 ### Rate Limiter (`app/config/rate_limiter.py`)
 
@@ -494,6 +496,42 @@ limiter = Limiter(
     storage_uri=f"redis://{settings.redis_host}:{settings.redis_port}/1"
 )
 ```
+
+---
+
+## 🛡️ Code Quality, Security & SonarQube Integration
+
+This project integrates a local **SonarQube Server** (`http://localhost:9000`) and **VS Code SonarLint** for automated code quality gates, security hotspot analysis, and real-time IDE linting.
+
+### 🏆 100% Resolved Backend Quality Gate
+* **0 Unresolved Issues** across all backend service, controller, and router files.
+* Full-stack source coverage configured via `sonar.sources=app,worker,frontend/src`.
+
+### 🔒 Key Security & Architectural Refactorings
+
+* **Middleware LIFO Ordering ([S8414](https://rules.sonarsource.com/python/RSPEC-8414)):** 
+  Reordered `add_middleware` calls so `CORSMiddleware` is added last, ensuring cross-origin requests are handled at the outermost network perimeter.
+* **Host Binding Security ([S8392](https://rules.sonarsource.com/python/RSPEC-8392)):** 
+  Guarded Uvicorn server host binding in `app/server.py`. Binds to `127.0.0.1` by default in development and only exposes `0.0.0.0` when explicitly set via the `SERVER_HOST` environment variable.
+* **ReDoS Prevention ([S5852](https://rules.sonarsource.com/python/RSPEC-5852)):** 
+  Replaced vulnerable regex patterns with linear-complexity token scanning (`_scan_email_tokens`) to eliminate backtracking DoS vectors.
+* **OpenAPI Status Code Documentation ([S8415](https://rules.sonarsource.com/python/RSPEC-8415)):** 
+  Annotated all route handlers with explicit `responses=` dictionaries for 400, 401, 403, 404, and 500 status codes.
+* **FastAPI `Annotated` Dependency Injection ([S8410](https://rules.sonarsource.com/python/RSPEC-8410)):** 
+  Standardized all router parameter dependencies to modern `Annotated[T, Depends(...)]` syntax.
+* **Cognitive Complexity Reduction ([S3776](https://rules.sonarsource.com/python/RSPEC-3776)):**
+  Refactored LLM provider fallback loops and interview sentinel branches into isolated static helper methods (`_log_prompt_inputs`, `_handle_advanced_sentinel`).
+
+### ⚙️ Running Analysis & IDE Connection
+
+1. **Terminal Scan:**
+   ```bash
+   just sonar
+   # Executes `uv run pysonar` against http://localhost:9000
+   ```
+2. **VS Code / IDE Integration:**
+   * Configure project binding in [`.vscode/settings.json`](file:///d:/Resume%20Intelligence/.vscode/settings.json) with your user token (`squ_...`).
+   * Run command `SonarLint: Update all project bindings` to sync rules with your local SonarQube server.
 
 ---
 
@@ -544,22 +582,6 @@ just docker-ps    # List running containers
 
 ```bash
 pytest tests/ -v --cov=app
-```
-
-## 🛡️ Code Quality & Security (SonarQube)
-
-This project integrates **SonarQube** for automated code quality gates, code smell detection, and security hotspot analysis. I actively maintain clean code standards and have resolved major security hotspots:
-
-### 🔒 Key Security Fixes
-* **Catastrophic Backtracking (ReDoS) Prevention ([S5852](https://rules.sonarsource.com/python/RSPEC-5852)):** 
-  I replaced vulnerable regular expressions used in email parsing with a secure, linear-complexity token scanner (`_scan_email_tokens`) utilizing string splits and character strip operations. This completely eliminates the risk of Denial of Service (DoS) attacks via backtracking.
-* **Cognitive Complexity Reduction ([S3776](https://rules.sonarsource.com/python/RSPEC-3776)):**
-  Refactored deeply nested loops and helper functions inside the resume service into modular static helper methods (`_is_valid_email`, `_scan_email_tokens`), keeping cognitive complexity scores well below SonarQube's strict limits.
-
-### ⚙️ Running Analysis
-To run a local SonarQube quality analysis scan:
-```bash
-just sonar
 ```
 
 ---
