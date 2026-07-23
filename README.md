@@ -548,11 +548,11 @@ pytest tests/ -v --cov=app
 
 ## 🛡️ Code Quality & Security (SonarQube)
 
-This project integrates **SonarQube** for automated code quality gates, code smell detection, and security hotspot analysis. We actively maintain clean code standards and have resolved major security hotspots:
+This project integrates **SonarQube** for automated code quality gates, code smell detection, and security hotspot analysis. I actively maintain clean code standards and have resolved major security hotspots:
 
 ### 🔒 Key Security Fixes
 * **Catastrophic Backtracking (ReDoS) Prevention ([S5852](https://rules.sonarsource.com/python/RSPEC-5852)):** 
-  We replaced vulnerable regular expressions used in email parsing with a secure, linear-complexity token scanner (`_scan_email_tokens`) utilizing string splits and character strip operations. This completely eliminates the risk of Denial of Service (DoS) attacks via backtracking.
+  I replaced vulnerable regular expressions used in email parsing with a secure, linear-complexity token scanner (`_scan_email_tokens`) utilizing string splits and character strip operations. This completely eliminates the risk of Denial of Service (DoS) attacks via backtracking.
 * **Cognitive Complexity Reduction ([S3776](https://rules.sonarsource.com/python/RSPEC-3776)):**
   Refactored deeply nested loops and helper functions inside the resume service into modular static helper methods (`_is_valid_email`, `_scan_email_tokens`), keeping cognitive complexity scores well below SonarQube's strict limits.
 
