@@ -6,12 +6,13 @@ class Settings(BaseSettings):
     app_name: str = "ATS Resume Intelligence"
     env: str = "development"
     port: int = 3000
+    allowed_origins: str = "*"
 
     # DATABASE SETTINGS
     database_url: str
 
     # SECURITY SETTINGS
-    jwt_secret_key: str = "super_secret_development_key_change_me_in_production"
+    jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_expires_in_minutes: int = 60
 
@@ -26,7 +27,9 @@ class Settings(BaseSettings):
     top_k_chunks: int = 3
 
     # LLM FALLBACK & ENDPOINT SETTINGS
-    llm_fallback_models: str = "openai/gpt-oss-120b,qwen/qwen3.6-27b,llama-3.3-70b-versatile"
+    llm_fallback_models: str = (
+        "openai/gpt-oss-120b,qwen/qwen3.6-27b,llama-3.3-70b-versatile"
+    )
     llm_base_url: str | None = None
 
     # REDIS SETTINGS
@@ -40,12 +43,13 @@ class Settings(BaseSettings):
     mail_password: str | None = None
     mail_from_email: str = "noreply@resumeintelligence.com"
     mail_admin_email: str = "admin@resumeintelligence.com"
+    # RECRUITER MOCK CREDENTIALS
+    recruiter_email: str = "recruiter@example.com"
+    recruiter_password: str = "password123"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", case_sensitive=False, env_file_encoding="utf-8", extra="ignore"
     )
+
 
 settings = Settings()

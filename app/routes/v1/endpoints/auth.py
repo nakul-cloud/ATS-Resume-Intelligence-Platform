@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -8,7 +10,7 @@ from app.utils.response import error_response, success_response
 router = APIRouter()
 
 @router.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     """
     Authenticates recruiter credentials and returns a JWT access token.
     """

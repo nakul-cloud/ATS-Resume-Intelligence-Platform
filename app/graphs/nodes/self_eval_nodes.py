@@ -17,7 +17,6 @@ from app.utils.logger import logger
 from app.utils.pdf_extractor import extract_pdf_text
 from app.utils.text_builder import build_embedding_text
 
-
 # ==========================================
 # 1. ISOLATED WORKFLOW HELPERS (Fixes S3776, S1145, S1541)
 # ==========================================

@@ -58,7 +58,7 @@ def recommend_projects(
         # Let's extract the list dynamically.
         if isinstance(parsed, dict):
             # If the LLM returned e.g. {"projects": [...]}, extract it
-            for key, val in parsed.items():
+            for _key, val in parsed.items():
                 if isinstance(val, list):
                     return val
             # Fallback if it is a dict but not nested

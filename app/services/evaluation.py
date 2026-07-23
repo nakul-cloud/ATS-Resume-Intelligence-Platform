@@ -1,10 +1,8 @@
-from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.agents.evaluator import evaluate_candidate_against_jd
-from app.config.settings import settings
 from app.exceptions.custom_exceptions import AIServiceError
 from app.models.candidate import Candidate
 from app.models.evaluation import (
@@ -14,20 +12,12 @@ from app.models.evaluation import (
     EvaluationSkillGap,
     EvaluationStrength,
 )
+from app.services.ai.embedder import EmbeddingService
 from app.services.ai.vector_store import VectorStore
 from app.utils.logger import logger
 
 
 class EvaluationService:
-    _model = None
-
-    @classmethod
-    def get_model(cls) -> SentenceTransformer:
-        """Lazily loads the SentenceTransformer embedding model."""
-        if cls._model is None:
-            logger.info(f"Loading SentenceTransformer model ({settings.embedding_model_name})...")
-            cls._model = SentenceTransformer(settings.embedding_model_name)
-        return cls._model
 
     @classmethod
     def _get_decision_band(cls, score: int) -> DecisionBand:
@@ -51,8 +41,7 @@ class EvaluationService:
 
         # 1. Generate query embedding of the Job Description
         try:
-            model = cls.get_model()
-            jd_vector = model.encode(jd_text).tolist()
+            jd_vector = EmbeddingService.encode_text(jd_text)
         except Exception as e:
             logger.error(f"Failed to generate embedding for Job Description: {e}")
             raise AIServiceError(f"Embedding generation failed: {e}") from e

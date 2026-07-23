@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,8 +18,8 @@ router = APIRouter()
 @router.post("/session")
 async def start_interview_session(
     request: InterviewSessionCreateRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Starts a new dynamic interview session for a candidate, generating the first question.
@@ -42,8 +44,8 @@ async def start_interview_session(
 @router.post("/answer")
 async def submit_interview_answer(
     request: InterviewAnswerSubmitRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Submits candidate answer, returns score feedback and next question (if active).

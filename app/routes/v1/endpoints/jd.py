@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +15,8 @@ router = APIRouter()
 @router.post("/evaluate")
 async def evaluate_job_description(
     request: JDEvaluationRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Ranks existing candidates against Job Description text using Qdrant vector-store search
@@ -46,8 +48,8 @@ async def evaluate_job_description(
 @router.post("/normalize")
 async def normalize_job_description(
     request: JDRewriteRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Stands up a raw job description string and parses it into organized JSON fields.

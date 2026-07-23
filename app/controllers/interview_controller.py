@@ -5,7 +5,7 @@ from app.services.interview import InterviewService
 
 class InterviewController:
     @classmethod
-    async def start_session(cls, db: AsyncSession, candidate_id: int, evaluation_id: int = None) -> dict:
+    async def start_session(cls, db: AsyncSession, candidate_id: int, evaluation_id: int | None = None) -> dict:
         """
         Coordinates session setup and first question generation via InterviewService.
         """
@@ -30,9 +30,8 @@ class InterviewController:
         """
         Submits answer, invokes LangGraph interview workflow, and returns graded evaluation.
         """
-        eval_result = await InterviewService.submit_answer(
+        return await InterviewService.submit_answer(
             db=db,
             question_id=question_id,
             answer_text=answer_text
         )
-        return eval_result

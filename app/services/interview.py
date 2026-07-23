@@ -3,6 +3,7 @@ app/services/interview.py
 Interview service — contains both stateful (InterviewService) and stateless (StatelessInterviewService)
 mock interview logic.
 """
+
 import json
 import uuid
 from typing import Any
@@ -16,9 +17,9 @@ from app.agents.interview_eval_agent import (
     generate_initial_question,
     generate_next_stateless_question,
 )
+from app.constants.general import DEFAULT_DOMAIN_TECH, DEFAULT_ROLE_ENGINEER
 from app.exceptions.custom_exceptions import AIServiceError, NotFoundError
 from app.models.candidate import Candidate
-from app.constants.general import DEFAULT_DOMAIN_TECH, DEFAULT_ROLE_ENGINEER
 from app.models.evaluation import Evaluation, EvaluationSkillGap
 from app.models.interview import InterviewAnswer, InterviewQuestion, InterviewSession
 from app.services.resume import ResumeService
@@ -27,6 +28,7 @@ from app.utils.logger import logger
 # ---------------------------------------------------------------------------
 # Stateful InterviewService (Original)
 # ---------------------------------------------------------------------------
+
 
 class InterviewService:
     MAX_QUESTIONS_PER_SESSION = 5
@@ -39,10 +41,14 @@ class InterviewService:
         Starts a new mock interview session for a candidate, identifies gaps,
         generates the initial question, and records it in the database.
         """
-        logger.info(f"Initializing interview session for Candidate ID {candidate_id}...")
+        logger.info(
+            f"Initializing interview session for Candidate ID {candidate_id}..."
+        )
 
         # 1. Fetch Candidate
-        candidate_res = await db.execute(select(Candidate).where(Candidate.id == candidate_id))
+        candidate_res = await db.execute(
+            select(Candidate).where(Candidate.id == candidate_id)
+        )
         candidate = candidate_res.scalar_one_or_none()
         if not candidate:
             raise NotFoundError(f"Candidate with ID {candidate_id} not found")
@@ -54,7 +60,9 @@ class InterviewService:
         # 2. Retrieve Gaps (prioritize specific evaluation ID, fallback to latest evaluation)
         gaps = []
         if evaluation_id:
-            eval_clause = select(EvaluationSkillGap.gap_text).where(EvaluationSkillGap.evaluation_id == evaluation_id)
+            eval_clause = select(EvaluationSkillGap.gap_text).where(
+                EvaluationSkillGap.evaluation_id == evaluation_id
+            )
         else:
             eval_clause = (
                 select(EvaluationSkillGap.gap_text)
@@ -76,9 +84,7 @@ class InterviewService:
 
         # 4. Create InterviewSession
         session = InterviewSession(
-            candidate_id=candidate.id,
-            evaluation_id=evaluation_id,
-            status="IN_PROGRESS"
+            candidate_id=candidate.id, evaluation_id=evaluation_id, status="IN_PROGRESS"
         )
         db.add(session)
         await db.flush()  # Generate session.id UUID
@@ -88,7 +94,7 @@ class InterviewService:
             session_id=session.id,
             question_text=initial_q["question_text"],
             difficulty_level=initial_q.get("difficulty_level", "MEDIUM"),
-            question_order=1
+            question_order=1,
         )
         db.add(first_question)
 
@@ -96,11 +102,15 @@ class InterviewService:
         await db.refresh(session)
         await db.refresh(first_question)
 
-        logger.info(f"Interview session {session.id} started. First question generated.")
+        logger.info(
+            f"Interview session {session.id} started. First question generated."
+        )
         return session, first_question
 
     @classmethod
-    async def submit_answer(cls, db: AsyncSession, question_id: int, answer_text: str) -> dict:
+    async def submit_answer(
+        cls, db: AsyncSession, question_id: int, answer_text: str
+    ) -> dict:
         """
         Submits candidate's answer to a question, scores it via LLM,
         saves the evaluation, and dynamically generates the next question or completes the session.
@@ -109,8 +119,7 @@ class InterviewService:
 
         # 1. Fetch Interview Question
         question_res = await db.execute(
-            select(InterviewQuestion)
-            .where(InterviewQuestion.id == question_id)
+            select(InterviewQuestion).where(InterviewQuestion.id == question_id)
         )
         question = question_res.scalar_one_or_none()
         if not question:
@@ -122,9 +131,13 @@ class InterviewService:
         )
         session = session_res.scalar_one_or_none()
         if not session or session.status != "IN_PROGRESS":
-            raise AIServiceError("Interview session is not active or has already been completed")
+            raise AIServiceError(
+                "Interview session is not active or has already been completed"
+            )
 
-        candidate_res = await db.execute(select(Candidate).where(Candidate.id == session.candidate_id))
+        candidate_res = await db.execute(
+            select(Candidate).where(Candidate.id == session.candidate_id)
+        )
         candidate = candidate_res.scalar_one_or_none()
 
         role = candidate.primary_role_title if candidate else DEFAULT_ROLE_ENGINEER
@@ -144,7 +157,7 @@ class InterviewService:
                 candidate_answer=answer_text,
                 role=role,
                 domain=domain,
-                current_difficulty=question.difficulty_level
+                current_difficulty=question.difficulty_level,
             )
         except Exception as e:
             logger.error(f"LLM answer evaluation failed: {e}")
@@ -156,7 +169,7 @@ class InterviewService:
             answer_text=answer_text,
             feedback_text=eval_res.get("feedback"),
             score=eval_res.get("score"),
-            follow_up_question=eval_res.get("follow_up_question")
+            follow_up_question=eval_res.get("follow_up_question"),
         )
         db.add(answer)
         await db.flush()
@@ -167,8 +180,9 @@ class InterviewService:
 
         # Check current question count
         count_res = await db.execute(
-            select(func.count(InterviewQuestion.id))
-            .where(InterviewQuestion.session_id == session.id)
+            select(func.count(InterviewQuestion.id)).where(
+                InterviewQuestion.session_id == session.id
+            )
         )
         current_question_count = count_res.scalar() or 1
 
@@ -181,7 +195,7 @@ class InterviewService:
                 session_id=session.id,
                 question_text=follow_up,
                 difficulty_level=next_difficulty,
-                question_order=current_question_count + 1
+                question_order=current_question_count + 1,
             )
             db.add(next_question)
             await db.flush()
@@ -202,13 +216,14 @@ class InterviewService:
             "follow_up_question": follow_up if status == "IN_PROGRESS" else None,
             "next_difficulty": next_difficulty if status == "IN_PROGRESS" else "MEDIUM",
             "next_question_id": next_question_id,
-            "status": status
+            "status": status,
         }
 
 
 # ---------------------------------------------------------------------------
 # Tier helpers & resolution logic (for StatelessInterviewService)
 # ---------------------------------------------------------------------------
+
 
 def compute_score_tier(evaluation_score: float | None) -> str:
     """Map a 0-100 evaluation score to a tier key."""
@@ -229,7 +244,7 @@ def _upgrade_threshold(tier: str) -> float | None:
     or None if the tier never gets an advanced round.
     """
     return {
-        "BASIC": None,        # No advanced round for BASIC tier
+        "BASIC": None,  # No advanced round for BASIC tier
         "GAP_ANALYSIS": 70.0,
         "ADVANCED": 80.0,
     }.get(tier)
@@ -282,7 +297,9 @@ async def _resolve_candidate(
             record = res.scalars().first()
 
         if not record:
-            record = await ResumeService.persist_parsed_candidate(db=db, data=candidate_data)
+            record = await ResumeService.persist_parsed_candidate(
+                db=db, data=candidate_data
+            )
 
     if not record:
         res = await db.execute(select(Candidate).limit(1))
@@ -304,6 +321,7 @@ async def _resolve_candidate(
 # ---------------------------------------------------------------------------
 # StatelessInterviewService
 # ---------------------------------------------------------------------------
+
 
 class StatelessInterviewService:
     """
@@ -394,8 +412,14 @@ class StatelessInterviewService:
         the next question or final report, and persists everything to Postgres.
         """
         candidate = candidate_data or {}
-        role = candidate.get("primary_role_title") or candidate.get("role") or "Software Developer"
-        domain = candidate.get("primary_domain") or candidate.get("domain") or "General Tech"
+        role = (
+            candidate.get("primary_role_title")
+            or candidate.get("role")
+            or "Software Developer"
+        )
+        domain = (
+            candidate.get("primary_domain") or candidate.get("domain") or "General Tech"
+        )
         tier = score_tier or "GAP_ANALYSIS"
 
         # Resolve DB session
@@ -409,6 +433,16 @@ class StatelessInterviewService:
                 history=list(history or []),
                 role=role,
                 domain=domain,
+            )
+
+        # Handle Advanced Round transition sentinel
+        if question_text == "Initiate Advanced scenarios":
+            return cls._handle_advanced_sentinel(
+                candidate=candidate,
+                jd_text=jd_text,
+                gaps=gaps,
+                history=history,
+                tier=tier,
             )
 
         # Evaluate the submitted answer
@@ -483,7 +517,9 @@ class StatelessInterviewService:
                 average_score=average_score,
                 total_questions=total_questions,
             )
-            await cls._persist_final_report(db=db, session=session, final_report=final_report)
+            await cls._persist_final_report(
+                db=db, session=session, final_report=final_report
+            )
 
         if session:
             await db.commit()
@@ -501,6 +537,41 @@ class StatelessInterviewService:
             "average_score": round(average_score, 1),
             "basic_report": basic_report,
             "final_report": final_report,
+        }
+
+    @classmethod
+    def _handle_advanced_sentinel(
+        cls,
+        *,
+        candidate: dict,
+        jd_text: str,
+        gaps: list,
+        history: list,
+        tier: str,
+    ) -> dict:
+        """
+        Handles the 'Initiate Advanced scenarios' sentinel by generating the first
+        advanced-round question and returning the next-state dict.
+        Extracted from submit_answer to reduce its cognitive complexity (S3776).
+        """
+        q_data = generate_next_stateless_question(
+            candidate_profile=candidate,
+            jd_text=jd_text,
+            gaps=gaps or [],
+            history=list(history or []),
+            is_advanced=True,
+            tier=tier,
+        )
+        next_question = {
+            "question_text": q_data["question_text"],
+            "difficulty_level": q_data.get("difficulty_level", "HARD"),
+        }
+        return {
+            "next_question": next_question,
+            "status": "IN_PROGRESS",
+            "can_upgrade": False,
+            "feedback": "Advanced round activated.",
+            "history": list(history or []),
         }
 
     @staticmethod
@@ -531,7 +602,9 @@ class StatelessInterviewService:
         total_questions = len(history)
 
         try:
-            final_report = generate_final_report(role=role, domain=domain, history=history)
+            final_report = generate_final_report(
+                role=role, domain=domain, history=history
+            )
             final_report["average_score"] = round(average_score, 1)
             final_report["report_type"] = "combined" if total_questions > 5 else "basic"
         except Exception as e:
@@ -610,21 +683,27 @@ class StatelessInterviewService:
             db_question = res_latest.scalar_one_or_none()
 
         if db_question:
-            db.add(InterviewAnswer(
-                question_id=db_question.id,
-                answer_text=answer_text,
-                feedback_text=graded_item["feedback"],
-                score=graded_item["answer_score"],
-                follow_up_question=next_question["question_text"] if next_question else None,
-            ))
+            db.add(
+                InterviewAnswer(
+                    question_id=db_question.id,
+                    answer_text=answer_text,
+                    feedback_text=graded_item["feedback"],
+                    score=graded_item["answer_score"],
+                    follow_up_question=next_question["question_text"]
+                    if next_question
+                    else None,
+                )
+            )
 
         if next_question and status == "IN_PROGRESS":
-            db.add(InterviewQuestion(
-                session_id=session.id,
-                question_text=next_question["question_text"],
-                difficulty_level=next_question["difficulty_level"],
-                question_order=total_questions + 1,
-            ))
+            db.add(
+                InterviewQuestion(
+                    session_id=session.id,
+                    question_text=next_question["question_text"],
+                    difficulty_level=next_question["difficulty_level"],
+                    question_order=total_questions + 1,
+                )
+            )
 
         if status == "COMPLETED":
             session.status = "COMPLETED"
@@ -740,6 +819,8 @@ class StatelessInterviewService:
                 average_score=average_score,
                 total_questions=total_questions,
             )
-            await cls._persist_final_report(db=db, session=session, final_report=final_report)
+            await cls._persist_final_report(
+                db=db, session=session, final_report=final_report
+            )
 
         return basic_report, final_report

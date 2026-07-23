@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from .project import RecommendedProject
 
 
-class DecisionBand(str, enum.Enum):
+class DecisionBand(enum.StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

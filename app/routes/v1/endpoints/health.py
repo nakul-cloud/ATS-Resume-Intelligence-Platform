@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -9,7 +10,7 @@ from app.config.database import get_db
 router = APIRouter()
 
 @router.get("/")
-async def health_check(db: AsyncSession = Depends(get_db)):
+async def health_check(db: Annotated[AsyncSession, Depends(get_db)]):
     """
     Standard check evaluating database connection health and system versions.
     """
@@ -22,7 +23,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         return {
             "status": "healthy",
             "postgres_connected": True,
-            "timestamp":timestamp,
+            "timestamp": timestamp,
             "features": [
                 "LangGraph Multi-Agent Workflows",
                 "Qdrant Search Profiles",

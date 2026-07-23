@@ -17,7 +17,7 @@ def optimize_resume_bullets(
     focus_areas: list[str]
 ) -> dict[str, Any]:
     """
-    Sends candidate's details and the target Job Description to Groq to generate 
+    Sends candidate's details and the target Job Description to Groq to generate
     highly customized, high-impact STAR optimized resume bullet point rewrites.
     """
     logger.info(f"Invoking Resume Rewrite Agent for candidate: {candidate_name}...")

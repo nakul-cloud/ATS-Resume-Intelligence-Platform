@@ -6,6 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.project_rec_agent import recommend_projects
 from app.agents.resume_rewrite_agent import optimize_resume_bullets
+from app.constants.general import (
+    DEFAULT_DOMAIN,
+    DEFAULT_GUEST,
+    DEFAULT_NAME,
+    DEFAULT_ROLE,
+)
 from app.exceptions.custom_exceptions import NotFoundError
 from app.graphs.state import SelfEvalState
 from app.graphs.workflows import agentic_self_eval_app
@@ -13,20 +19,24 @@ from app.models.candidate import Candidate
 from app.models.evaluation import Evaluation, EvaluationSkillGap
 from app.models.rewrite_cache import ResumeRewriteCache
 from app.utils.deduplication import compute_text_similarity
+from app.utils.json_utils import parse_json_list
 from app.utils.logger import logger
-
-from app.constants.general import DEFAULT_DOMAIN, DEFAULT_GUEST, DEFAULT_NAME, DEFAULT_ROLE
 
 
 class CandidateService:
     @classmethod
-    async def parse_and_map_session_resume(cls, file_name: str, file_bytes: bytes, db: AsyncSession) -> dict:
+    async def parse_and_map_session_resume(
+        cls, file_name: str, file_bytes: bytes, db: AsyncSession
+    ) -> dict:
         """
         Parses an uploaded resume in-memory and maps the fields into the exact adapter schema
         expected by the candidate dashboard portal.
         """
         from app.services.resume import ResumeService
-        parsed_data = await ResumeService.parse_resume_session(file_name=file_name, file_bytes=file_bytes, db=db)
+
+        parsed_data = await ResumeService.parse_resume_session(
+            file_name=file_name, file_bytes=file_bytes, db=db
+        )
 
         mapped_skills = [
             s.get("skill_name") if isinstance(s, dict) else s
@@ -37,31 +47,80 @@ class CandidateService:
         return {
             "status": "success",
             "message": "Resume parsed successfully (In-Memory Session)",
-            "candidate_id": 0,
+            "candidate_id": None,
             "parsed_data": {
                 "name": parsed_data.get("candidate_name") or DEFAULT_NAME,
                 "email": parsed_data.get("email"),
                 "phone_number": parsed_data.get("phone_number"),
                 "role": parsed_data.get("primary_role_title"),
                 "domain": parsed_data.get("primary_domain"),
-                "experience": float(parsed_data.get("total_experience_years")) if parsed_data.get("total_experience_years") else 0.0,
+                "experience": float(parsed_data.get("total_experience_years"))
+                if parsed_data.get("total_experience_years")
+                else 0.0,
                 "highest_education": parsed_data.get("highest_education"),
                 "summary_text": parsed_data.get("summary_text"),
                 "skills": mapped_skills,
                 "projects": parsed_data.get("projects") or [],
                 "accomplishments": parsed_data.get("accomplishments") or [],
                 "hobbies": parsed_data.get("hobbies") or [],
-                "work_experience": parsed_data.get("work_experience") or []
-            }
+                "work_experience": parsed_data.get("work_experience") or [],
+            },
         }
 
     @classmethod
-    async def agent_self_evaluate(cls, db: AsyncSession, candidate_id: int | None = None, candidate_data: dict | None = None, jd_text: str = "") -> dict:
+    async def get_candidate_profile(cls, db: AsyncSession, candidate_id: int) -> dict:
+        """
+        Retrieves a candidate by ID, loading skills, and parses projects/experience.
+        """
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Candidate)
+            .options(selectinload(Candidate.skills))
+            .where(Candidate.id == candidate_id)
+        )
+        res = await db.execute(stmt)
+        candidate = res.scalar_one_or_none()
+        if not candidate:
+            raise NotFoundError(f"Candidate with ID {candidate_id} not found")
+
+        return {
+            "status": "success",
+            "candidate_id": candidate.id,
+            "parsed_data": {
+                "name": candidate.candidate_name,
+                "email": candidate.email,
+                "phone_number": candidate.phone_number,
+                "role": candidate.primary_role_title,
+                "domain": candidate.primary_domain,
+                "experience": float(candidate.total_experience_years or 0.0),
+                "highest_education": candidate.highest_education,
+                "summary_text": candidate.summary_text,
+                "skills": [s.skill_name for s in candidate.skills]
+                if candidate.skills
+                else [],
+                "projects": parse_json_list(candidate.projects_json),
+                "accomplishments": parse_json_list(candidate.accomplishments_json),
+                "hobbies": parse_json_list(candidate.hobbies_json),
+                "work_experience": parse_json_list(candidate.work_experience_json),
+            },
+        }
+
+    @classmethod
+    async def agent_self_evaluate(
+        cls,
+        db: AsyncSession,
+        candidate_id: int | None = None,
+        candidate_data: dict | None = None,
+        jd_text: str = "",
+    ) -> dict:
         """
         Performs candidate self-evaluation using the LangGraph agent workflow.
         """
         if not candidate_id and not candidate_data:
-            raise ValueError("Either candidate_id or candidate_data is required for self evaluation")
+            raise ValueError(
+                "Either candidate_id or candidate_data is required for self evaluation"
+            )
 
         profile = await cls._resolve_candidate_profile(db, candidate_id, candidate_data)
 
@@ -85,7 +144,7 @@ class CandidateService:
             error="",
             current_step="started",
             parsed_resume={},
-            candidate_text=""
+            candidate_text="",
         )
 
         final_state = await agentic_self_eval_app.ainvoke(initial_state)
@@ -100,7 +159,7 @@ class CandidateService:
             "decision_reasoning": final_state.get("decision_reasoning", "Completed"),
             "status": "success" if not final_state.get("error") else "failed",
             "role": final_state.get("role", "N/A"),
-            "domain": final_state.get("domain", "N/A")
+            "domain": final_state.get("domain", "N/A"),
         }
 
     @classmethod
@@ -109,7 +168,7 @@ class CandidateService:
         db: AsyncSession,
         candidate_id: int | None = None,
         candidate_data: dict | None = None,
-        gaps: list[str] | None = None
+        gaps: list[str] | None = None,
     ) -> list[dict]:
         """
         Suggests targeted development projects to bridge candidate capability gaps.
@@ -135,7 +194,7 @@ class CandidateService:
             role=profile["role"],
             experience_years=profile["experience"],
             skills=profile["skills_list"],
-            gaps=gaps_list
+            gaps=gaps_list,
         )
 
     @classmethod
@@ -145,7 +204,7 @@ class CandidateService:
         candidate_id: int | None = None,
         candidate_data: dict | None = None,
         jd_text: str | None = None,
-        focus_areas: list[str] | None = None
+        focus_areas: list[str] | None = None,
     ) -> dict:
         """
         Suggests rewrites and bullet points to improve the candidate's resume match.
@@ -171,10 +230,14 @@ class CandidateService:
             return cached_result
 
         # Parse bullet points to optimize
-        original_bullets = cls._extract_original_bullets(profile["work_experience"], profile["projects"])
+        original_bullets = cls._extract_original_bullets(
+            profile["work_experience"], profile["projects"]
+        )
 
         if not original_bullets:
-            raise ValueError("No experience bullets or project descriptions available to optimize")
+            raise ValueError(
+                "No experience bullets or project descriptions available to optimize"
+            )
 
         # Invoke the rewrite agent dynamically via Groq
         result = optimize_resume_bullets(
@@ -183,7 +246,7 @@ class CandidateService:
             skills=profile["skills_list"],
             projects=profile["projects"],
             jd_text=jd_norm,
-            focus_areas=focus_list
+            focus_areas=focus_list,
         )
 
         # Save to cache
@@ -193,7 +256,7 @@ class CandidateService:
             focus_areas_hash=focus_hash,
             optimized_result_json=json.dumps(result),
             raw_jd_text=jd_norm,
-            raw_candidate_text=cand_str
+            raw_candidate_text=cand_str,
         )
         db.add(new_cache)
         await db.commit()
@@ -203,11 +266,13 @@ class CandidateService:
     # --- PRIVATE MODULARIZATION HELPERS ---
 
     @classmethod
-    async def _resolve_candidate_profile(cls, db: AsyncSession, candidate_id: int | None, candidate_data: dict | None) -> dict:
+    async def _resolve_candidate_profile(
+        cls, db: AsyncSession, candidate_id: int | None, candidate_data: dict | None
+    ) -> dict:
         """Resolves candidate details from Postgres ID or direct JSON inputs to a unified format."""
         if candidate_id and candidate_id > 0:
             return await cls._resolve_profile_from_db(db, candidate_id)
-        elif candidate_data:
+        if candidate_data:
             return cls._resolve_profile_from_dict(candidate_data)
 
         return cls._get_default_profile()
@@ -225,11 +290,13 @@ class CandidateService:
             "skills_text": "",
             "skills_list": [],
             "projects": [],
-            "work_experience": []
+            "work_experience": [],
         }
 
     @classmethod
-    async def _resolve_profile_from_db(cls, db: AsyncSession, candidate_id: int) -> dict:
+    async def _resolve_profile_from_db(
+        cls, db: AsyncSession, candidate_id: int
+    ) -> dict:
         """Fetches candidate from database and maps to standard dict."""
         candidate = await db.get(Candidate, candidate_id)
         if not candidate:
@@ -237,15 +304,19 @@ class CandidateService:
 
         return {
             "name": candidate.candidate_name or DEFAULT_NAME,
-            "experience": float(candidate.total_experience_years) if candidate.total_experience_years else 0.0,
+            "experience": float(candidate.total_experience_years)
+            if candidate.total_experience_years
+            else 0.0,
             "summary": candidate.summary_text or "",
             "education": candidate.highest_education or "",
             "role": candidate.primary_role_title or DEFAULT_ROLE,
             "domain": candidate.primary_domain or DEFAULT_DOMAIN,
             "skills_text": candidate.skills_text or "",
-            "skills_list": [s.skill_name for s in candidate.skills] if candidate.skills else [],
-            "projects": cls._parse_json_list(candidate.projects_json),
-            "work_experience": cls._parse_json_list(candidate.work_experience_json)
+            "skills_list": [s.skill_name for s in candidate.skills]
+            if candidate.skills
+            else [],
+            "projects": parse_json_list(candidate.projects_json),
+            "work_experience": parse_json_list(candidate.work_experience_json),
         }
 
     @classmethod
@@ -254,7 +325,9 @@ class CandidateService:
         skills_list = []
         raw_skills = candidate_data.get("skills")
         if isinstance(raw_skills, list):
-            skills_list = [s["skill_name"] if isinstance(s, dict) else s for s in raw_skills]
+            skills_list = [
+                s["skill_name"] if isinstance(s, dict) else s for s in raw_skills
+            ]
             skills_text = ", ".join(skills_list)
         else:
             skills_text = candidate_data.get("skills_text") or ""
@@ -262,49 +335,83 @@ class CandidateService:
 
         return {
             "name": candidate_data.get("name") or DEFAULT_NAME,
-            "experience": float(candidate_data.get("total_experience_years") or candidate_data.get("experience") or 2.0),
+            "experience": float(
+                candidate_data.get("total_experience_years")
+                or candidate_data.get("experience")
+                or 2.0
+            ),
             "summary": candidate_data.get("summary_text") or "",
             "education": candidate_data.get("highest_education") or "",
-            "role": candidate_data.get("primary_role_title") or candidate_data.get("role") or DEFAULT_ROLE,
-            "domain": candidate_data.get("primary_domain") or candidate_data.get("domain") or DEFAULT_DOMAIN,
+            "role": candidate_data.get("primary_role_title")
+            or candidate_data.get("role")
+            or DEFAULT_ROLE,
+            "domain": candidate_data.get("primary_domain")
+            or candidate_data.get("domain")
+            or DEFAULT_DOMAIN,
             "skills_text": skills_text,
             "skills_list": skills_list,
             "projects": candidate_data.get("projects") or [],
-            "work_experience": candidate_data.get("work_experience") or []
+            "work_experience": candidate_data.get("work_experience") or [],
         }
 
     @classmethod
-    def _parse_json_list(cls, json_str: str | None) -> list:
-        """Safely parses JSON string as list fallback to empty list."""
-        if not json_str:
-            return []
-        try:
-            return json.loads(json_str)
-        except Exception:
-            return []
-
-    @classmethod
     async def _check_rewrite_cache(
-        cls, db: AsyncSession, cand_str: str, cand_hash: str, jd_norm: str, jd_hash: str, focus_list: list[str], focus_hash: str
+        cls,
+        db: AsyncSession,
+        cand_str: str,
+        cand_hash: str,
+        jd_norm: str,
+        jd_hash: str,
+        focus_list: list[str],
+        focus_hash: str,
     ) -> dict | None:
         """Checks if a matching optimized candidate profile rewrite exists in cache."""
-        stmt = select(ResumeRewriteCache).where(
-            ResumeRewriteCache.focus_areas_hash == focus_hash
+        # 1. Try exact cache hit first (O(1) database lookup)
+        stmt_exact = select(ResumeRewriteCache).where(
+            ResumeRewriteCache.candidate_hash == cand_hash,
+            ResumeRewriteCache.jd_hash == jd_hash,
+            ResumeRewriteCache.focus_areas_hash == focus_hash,
         )
-        cache_res = await db.execute(stmt)
+        exact_entry = (await db.execute(stmt_exact)).scalars().first()
+        if exact_entry:
+            logger.info(
+                "Resume Rewrite Caching: Exact cache HIT! Skipping Groq rewrite call."
+            )
+            return json.loads(exact_entry.optimized_result_json)
+
+        # 2. Fall back to similarity checks with a safe cap of 20 entries
+        stmt_fuzzy = (
+            select(ResumeRewriteCache)
+            .where(ResumeRewriteCache.focus_areas_hash == focus_hash)
+            .order_by(ResumeRewriteCache.id.desc())
+            .limit(20)
+        )
+        cache_res = await db.execute(stmt_fuzzy)
         cache_entries = cache_res.scalars().all()
 
         for entry in cache_entries:
-            cand_sim = 1.0 if entry.candidate_hash == cand_hash else compute_text_similarity(cand_str, entry.raw_candidate_text or "")
-            jd_sim = 1.0 if entry.jd_hash == jd_hash else compute_text_similarity(jd_norm, entry.raw_jd_text or "")
+            cand_sim = (
+                1.0
+                if entry.candidate_hash == cand_hash
+                else compute_text_similarity(cand_str, entry.raw_candidate_text or "")
+            )
+            jd_sim = (
+                1.0
+                if entry.jd_hash == jd_hash
+                else compute_text_similarity(jd_norm, entry.raw_jd_text or "")
+            )
 
             if cand_sim >= 0.95 and jd_sim >= 0.95:
-                logger.info(f"Resume Rewrite Caching: Hit cache! Candidate Similarity={cand_sim * 100:.1f}%, JD Similarity={jd_sim * 100:.1f}%. Skipping Groq rewrite call.")
+                logger.info(
+                    f"Resume Rewrite Caching: Fuzzy cache HIT! Candidate Similarity={cand_sim * 100:.1f}%, JD Similarity={jd_sim * 100:.1f}%. Skipping Groq rewrite call."
+                )
                 return json.loads(entry.optimized_result_json)
         return None
 
     @classmethod
-    def _extract_original_bullets(cls, work_exp_list: list[dict], projects_list: list[dict]) -> list[str]:
+    def _extract_original_bullets(
+        cls, work_exp_list: list[dict], projects_list: list[dict]
+    ) -> list[str]:
         """Extracts bullet points from work experience or project descriptions to optimize."""
         bullets = cls._extract_work_bullets(work_exp_list)
         if not bullets:

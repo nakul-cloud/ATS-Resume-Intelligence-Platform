@@ -10,9 +10,9 @@ from app.utils.logger import logger
 # Used only for log display; actual enforcement is by the API.
 # ---------------------------------------------------------------------------
 _MODEL_LIMITS: dict[str, dict] = {
-    "openai/gpt-oss-120b":      {"tpm": 8_000,  "tpd": 200_000, "rpm": 30, "rpd": 1_000},
-    "qwen/qwen3.6-27b":         {"tpm": 8_000,  "tpd": 200_000, "rpm": 30, "rpd": 1_000},
-    "llama-3.3-70b-versatile":  {"tpm": 12_000, "tpd": 100_000, "rpm": 30, "rpd": 1_000},
+    "openai/gpt-oss-120b": {"tpm": 8_000, "tpd": 200_000, "rpm": 30, "rpd": 1_000},
+    "qwen/qwen3.6-27b": {"tpm": 8_000, "tpd": 200_000, "rpm": 30, "rpd": 1_000},
+    "llama-3.3-70b-versatile": {"tpm": 12_000, "tpd": 100_000, "rpm": 30, "rpd": 1_000},
 }
 
 # In-process daily/minute accumulators  (reset on restart; good enough for visibility)
@@ -22,11 +22,11 @@ _usage_counters: dict[str, dict] = {}
 def _get_counter(model: str) -> dict:
     if model not in _usage_counters:
         _usage_counters[model] = {
-            "total_input":  0,
+            "total_input": 0,
             "total_output": 0,
-            "total_calls":  0,
+            "total_calls": 0,
             "minute_tokens": 0,
-            "minute_start":  time.time(),
+            "minute_start": time.time(),
         }
     return _usage_counters[model]
 
@@ -39,31 +39,41 @@ def _log_usage(model: str, usage, elapsed_ms: float) -> None:
     if usage is None:
         return
 
-    prompt_tokens     = getattr(usage, "prompt_tokens", 0) or 0
+    prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
     completion_tokens = getattr(usage, "completion_tokens", 0) or 0
-    total_tokens      = getattr(usage, "total_tokens", 0) or (prompt_tokens + completion_tokens)
+    total_tokens = getattr(usage, "total_tokens", 0) or (
+        prompt_tokens + completion_tokens
+    )
 
     c = _get_counter(model)
-    c["total_input"]  += prompt_tokens
+    c["total_input"] += prompt_tokens
     c["total_output"] += completion_tokens
-    c["total_calls"]  += 1
+    c["total_calls"] += 1
 
     # Reset minute window if > 60 s have passed
     now = time.time()
     if now - c["minute_start"] > 60:
         c["minute_tokens"] = 0
-        c["minute_start"]  = now
+        c["minute_start"] = now
     c["minute_tokens"] += total_tokens
 
     limits = _MODEL_LIMITS.get(model, {})
-    tpm    = limits.get("tpm", "?")
-    tpd    = limits.get("tpd", "?")
+    tpm = limits.get("tpm", "?")
+    tpd = limits.get("tpd", "?")
 
-    tpm_used_pct = f"{round(c['minute_tokens'] / tpm * 100, 1)}%" if isinstance(tpm, int) else "?"
-    tpd_used_pct = f"{round((c['total_input'] + c['total_output']) / tpd * 100, 1)}%" if isinstance(tpd, int) else "?"
+    tpm_used_pct = (
+        f"{round(c['minute_tokens'] / tpm * 100, 1)}%" if isinstance(tpm, int) else "?"
+    )
+    tpd_used_pct = (
+        f"{round((c['total_input'] + c['total_output']) / tpd * 100, 1)}%"
+        if isinstance(tpd, int)
+        else "?"
+    )
 
     tpm_remaining = (tpm - c["minute_tokens"]) if isinstance(tpm, int) else "?"
-    tpd_remaining = (tpd - c["total_input"] - c["total_output"]) if isinstance(tpd, int) else "?"
+    tpd_remaining = (
+        (tpd - c["total_input"] - c["total_output"]) if isinstance(tpd, int) else "?"
+    )
 
     logger.info(
         f"\n"
@@ -94,11 +104,36 @@ class RobustCompletions:
     def __init__(self, raw_client: groq.Groq):
         self.raw_client = raw_client
 
+    @staticmethod
+    def _log_prompt_inputs(messages: list) -> None:
+        """Log each prompt message with safe truncation (extracted to reduce complexity)."""
+        logger.info(
+            "  ┌─── Prompt Inputs ───────────────────────────────────────────────────────────────────"
+        )
+        for msg in messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            if len(content) > 1000:
+                truncated = (
+                    content[:300]
+                    + "\n\n... [LARGE RESUME TEXT TRUNCATED FOR LOG SECURITY] ...\n\n"
+                    + content[-300:]
+                )
+            else:
+                truncated = content
+            indented = truncated.replace("\n", "\n  │  ")
+            logger.info(f"  │  [{role.upper()}]: {indented}")
+        logger.info(
+            "  └───────────────────────────────────────────────────────────────────"
+        )
+
     def create(self, *args, **kwargs):
         # Load ordered list of models from settings
         models_to_try: list[str] = []
         if settings.llm_fallback_models:
-            models_to_try = [m.strip() for m in settings.llm_fallback_models.split(",") if m.strip()]
+            models_to_try = [
+                m.strip() for m in settings.llm_fallback_models.split(",") if m.strip()
+            ]
 
         # Hard-coded fallback if settings is empty
         if not models_to_try:
@@ -117,10 +152,26 @@ class RobustCompletions:
         for model in models_to_try:
             kwargs["model"] = model
             logger.info(f"RobustLLM ▶  Calling model '{model}' ...")
+
+            # Structured Prompt Input logging (delegated to helper)
+            self._log_prompt_inputs(kwargs.get("messages", []))
+
             t0 = time.perf_counter()
             try:
                 response = self.raw_client.chat.completions.create(*args, **kwargs)
                 elapsed = (time.perf_counter() - t0) * 1000
+
+                # Log response content
+                if response and getattr(response, "choices", None):
+                    resp_content = response.choices[0].message.content or ""
+                    logger.info(
+                        "  ┌─── AI JSON Response ──────────────────────────────────────────"
+                    )
+                    indented_resp = resp_content.replace("\n", "\n  │  ")
+                    logger.info(f"  │  {indented_resp}")
+                    logger.info(
+                        "  └───────────────────────────────────────────────────────────────"
+                    )
 
                 # Log rich token usage
                 usage = getattr(response, "usage", None)
@@ -137,7 +188,9 @@ class RobustCompletions:
                 )
                 last_error = e
 
-        logger.error("RobustLLM ✗✗  ALL configured models failed. No more fallbacks available.")
+        logger.error(
+            "RobustLLM ✗✗  ALL configured models failed. No more fallbacks available."
+        )
         if last_error:
             raise last_error
         raise RuntimeError("RobustLLM: No models succeeded, but no error was caught.")
